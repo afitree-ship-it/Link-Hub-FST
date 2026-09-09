@@ -4,7 +4,7 @@ import {
   X, Save, Trash2, Edit2, Key, Info, FolderPlus, 
   Grid, Link2, CheckCircle2, AlertCircle, RefreshCw, Settings,
   Upload, FileImage, Pin, BarChart3, Bell, Plus, Users, ShieldAlert,
-  Lock
+  Lock, Download, Copy, Check, FileJson
 } from "lucide-react";
 import { AVAILABLE_ICONS, DynamicIcon } from "./DynamicIcon";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -394,6 +394,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Backup & Restore state
+  const [backupStatus, setBackupStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isCopiedBackup, setIsCopiedBackup] = useState(false);
+  const backupFileInputRef = useRef<HTMLInputElement>(null);
 
   // Crop & Resize Image Helper to exactly fit the 16:10 card aspect ratio
   const resizeAndCropImage = (file: File): Promise<string> => {
@@ -849,6 +854,88 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Export & Import Backup handlers
+  const handleExportBackup = () => {
+    try {
+      const backupData = {
+        version: "1.0",
+        exportedAt: new Date().toISOString(),
+        siteTitle: adminConfig.siteTitle || "",
+        siteLogoUrl: adminConfig.siteLogoUrl || "",
+        adminConfig,
+        links,
+        adminUsers: JSON.parse(localStorage.getItem("scitech_admin_users") || "[]"),
+      };
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `scitech-linkhub-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setBackupStatus({ type: 'success', message: 'ดาวน์โหลดไฟล์สำรองข้อมูล (.json) สำเร็จแล้ว!' });
+      setTimeout(() => setBackupStatus(null), 4000);
+    } catch (err) {
+      setBackupStatus({ type: 'error', message: 'เกิดข้อผิดพลาดในการสร้างไฟล์ดาวน์โหลด' });
+    }
+  };
+
+  const handleCopyBackupJSON = async () => {
+    try {
+      const backupData = {
+        version: "1.0",
+        exportedAt: new Date().toISOString(),
+        siteTitle: adminConfig.siteTitle || "",
+        siteLogoUrl: adminConfig.siteLogoUrl || "",
+        adminConfig,
+        links,
+        adminUsers: JSON.parse(localStorage.getItem("scitech_admin_users") || "[]"),
+      };
+      await navigator.clipboard.writeText(JSON.stringify(backupData, null, 2));
+      setIsCopiedBackup(true);
+      setBackupStatus({ type: 'success', message: 'คัดลอก JSON เรียบร้อยแล้ว! สามารถนำไปวางได้ทันที' });
+      setTimeout(() => {
+        setIsCopiedBackup(false);
+        setBackupStatus(null);
+      }, 4000);
+    } catch (err) {
+      setBackupStatus({ type: 'error', message: 'ไม่สามารถคัดลอกลงคลิปบอร์ดได้ กรุณาใช้ปุ่มดาวน์โหลดไฟล์แทน' });
+    }
+  };
+
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        if (parsed.links && Array.isArray(parsed.links)) {
+          localStorage.setItem("scitech_links", JSON.stringify(parsed.links));
+        }
+        if (parsed.adminConfig && typeof parsed.adminConfig === "object") {
+          localStorage.setItem("scitech_admin_config", JSON.stringify(parsed.adminConfig));
+          await onUpdateConfig(parsed.adminConfig);
+        }
+        if (parsed.adminUsers && Array.isArray(parsed.adminUsers)) {
+          localStorage.setItem("scitech_admin_users", JSON.stringify(parsed.adminUsers));
+        }
+        setBackupStatus({ type: 'success', message: 'นำเข้าข้อมูลสำเร็จ! กำลังรีเฟรชหน้าเว็บเพื่อปรับปรุงการแสดงผล...' });
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } catch (err) {
+        setBackupStatus({ type: 'error', message: 'ไฟล์ไม่ถูกต้อง กรุณาตรวจสอบว่าเป็นไฟล์ JSON จากระบบ' });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   const startEditLink = (link: Link) => {
@@ -1748,6 +1835,91 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </button>
                     </div>
                   </form>
+                </div>
+              </div>
+
+              {/* Data Backup & Transfer Config (For Vercel / Cross-Domain Migration) */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-emerald-600 text-white rounded-2xl">
+                    <FileJson className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">สำรองและย้ายข้อมูลเว็บไซต์ (Backup & Transfer for Vercel)</h3>
+                    <p className="text-xs text-slate-500">
+                      ส่งออกข้อมูลทุกลิงก์, โลโก้, ประกาศ และการตั้งค่า เพื่อนำไปซิงค์บน Vercel หรือย้ายอุปกรณ์ได้ในคลิกเดียว
+                    </p>
+                  </div>
+                </div>
+
+                {backupStatus && (
+                  <div className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                    backupStatus.type === 'success' 
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                      : 'bg-rose-50 text-rose-800 border border-rose-200'
+                  }`}>
+                    {backupStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
+                    <span>{backupStatus.message}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {/* Export Box */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Download className="w-4 h-4 text-emerald-600" />
+                      <h4 className="text-xs font-bold text-slate-700">1. ส่งออกข้อมูลจาก AI Studio (Export)</h4>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      ดาวน์โหลดข้อมูลลิงก์ทั้งหมด ({links.length} ลิงก์), รูปโลโก้ และการตั้งค่าเว็บไซต์เป็นไฟล์ JSON
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleExportBackup}
+                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>ดาวน์โหลดไฟล์ JSON</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCopyBackupJSON}
+                        className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        {isCopiedBackup ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                        <span>{isCopiedBackup ? "คัดลอกแล้ว" : "คัดลอก JSON"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Import Box */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-indigo-600" />
+                      <h4 className="text-xs font-bold text-slate-700">2. นำเข้าข้อมูลบน Vercel (Import)</h4>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      เปิดหน้าเว็บนี้บน Vercel แล้วกดเลือกไฟล์ JSON ที่สำรองไว้ เพื่อนำข้อมูลทั้งหมดมาแสดงทันที
+                    </p>
+                    <div className="pt-1">
+                      <input
+                        type="file"
+                        ref={backupFileInputRef}
+                        accept=".json,application/json"
+                        onChange={handleImportBackup}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => backupFileInputRef.current?.click()}
+                        className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>เลือกไฟล์ JSON เพื่อนำเข้า</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
