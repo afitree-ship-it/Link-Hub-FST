@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SciTech Link Portal</title>
+    <meta name="description" content="ศูนย์รวมลิงก์อเนกประสงค์เพื่อการบริการและเทคโนโลยี คณะวิทยาศาสตร์และเทคโนโลยี" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SciTech Link Portal" />
+    <meta property="og:description" content="ศูนย์รวมลิงก์อเนกประสงค์เพื่อการบริการและเทคโนโลยี คณะวิทยาศาสตร์และเทคโนโลยี" />
+    <meta property="og:image" content="/placeholder-logo.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="SciTech Link Portal" />
+    <meta property="twitter:description" content="ศูนย์รวมลิงก์อเนกประสงค์เพื่อการบริการและเทคโนโลยี คณะวิทยาศาสตร์และเทคโนโลยี" />
+    <meta property="twitter:image" content="/placeholder-logo.png" />
+    
+    <link rel="icon" type="image/png" href="/placeholder-logo.png" />
+    <script>
+      (function() {
+        if (typeof window === 'undefined') return;
+
+        if (typeof window.reportError !== 'function') {
+          window.reportError = function(e) {
+            console.warn('Unhandled error:', e);
+          };
+        }
+
+        try {
+          if (typeof window.PointerEvent === 'function') {
+            new window.PointerEvent('pointerdown');
+          }
+        } catch (_) {
+          try {
+            var OrigPointerEvent = window.PointerEvent;
+            window.PointerEvent = function(type, params) {
+              params = params || {};
+              var evt = document.createEvent('CustomEvent');
+              evt.initCustomEvent(type, params.bubbles !== false, params.cancelable !== false, params.detail);
+              Object.assign(evt, params);
+              return evt;
+            };
+            if (OrigPointerEvent && OrigPointerEvent.prototype) {
+              window.PointerEvent.prototype = OrigPointerEvent.prototype;
+            }
+          } catch (e) {}
+        }
+
+        try {
+          if (typeof window.ErrorEvent === 'function') {
+            new window.ErrorEvent('error');
+          }
+        } catch (_) {
+          try {
+            var OrigErrorEvent = window.ErrorEvent;
+            window.ErrorEvent = function(type, params) {
+              params = params || {};
+              var evt = document.createEvent('CustomEvent');
+              evt.initCustomEvent(type, params.bubbles !== false, params.cancelable !== false, params.detail);
+              Object.assign(evt, params);
+              return evt;
+            };
+            if (OrigErrorEvent && OrigErrorEvent.prototype) {
+              window.ErrorEvent.prototype = OrigErrorEvent.prototype;
+            }
+          } catch (e) {}
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
