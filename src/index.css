@@ -4,3 +4,44 @@
 @theme {
   --font-sans: "Prompt", "Inter", system-ui, -apple-system, sans-serif;
 }
+
+/* Smooth Scrolling & Performance Optimizations */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 2rem;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+/* Custom Smooth Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(92, 6, 32, 0.25);
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(92, 6, 32, 0.45);
+}
+
+/* Smooth touch scrolling for iOS / Android */
+* {
+  -webkit-overflow-scrolling: touch;
+}

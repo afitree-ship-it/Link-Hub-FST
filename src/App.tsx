@@ -22,7 +22,8 @@ import {
   List as ListIcon,
   AlignJustify,
   ChevronDown,
-  Check
+  Check,
+  ArrowUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { sendActionToWebApp } from "./googleSheets";
@@ -34,6 +35,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<"student" | "staff">("student");
   const [layoutMode, setLayoutMode] = useState<"grid" | "list" | "compact">("grid");
   const [showViewMenu, setShowViewMenu] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Admin States
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -69,6 +71,26 @@ export default function App() {
       console.error("Failed to restore session", err);
     }
   }, []);
+
+  // Smooth scroll to top listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
 
   // Fetch Links & Configs
   const fetchData = async () => {
@@ -531,14 +553,14 @@ export default function App() {
   }, [links, searchQuery, viewMode]);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-slate-800 flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8F9FA] text-slate-800 flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] relative overflow-x-clip">
       
       {/* Background Ambient Orbs (Mac Aesthetic) */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#5c0620]/30 blur-[100px] mix-blend-multiply" />
-        <div className="absolute top-[10%] right-[-10%] w-[50%] h-[70%] rounded-full bg-[#9f1239]/20 blur-[120px] mix-blend-multiply" />
-        <div className="absolute bottom-[-10%] left-[10%] w-[60%] h-[60%] rounded-full bg-[#4a044e]/20 blur-[120px] mix-blend-multiply" />
-        <div className="absolute top-[40%] left-[30%] w-[40%] h-[40%] rounded-full bg-[#fb7185]/15 blur-[90px] mix-blend-multiply" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 transform-gpu will-change-transform">
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#5c0620]/25 blur-[90px] mix-blend-multiply transform-gpu" />
+        <div className="absolute top-[10%] right-[-10%] w-[50%] h-[70%] rounded-full bg-[#9f1239]/18 blur-[100px] mix-blend-multiply transform-gpu" />
+        <div className="absolute bottom-[-10%] left-[10%] w-[60%] h-[60%] rounded-full bg-[#4a044e]/18 blur-[100px] mix-blend-multiply transform-gpu" />
+        <div className="absolute top-[40%] left-[30%] w-[40%] h-[40%] rounded-full bg-[#fb7185]/12 blur-[80px] mix-blend-multiply transform-gpu" />
         
         {/* Subtle Grid overlay for technical feel */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#8882_1px,transparent_1px),linear-gradient(to_bottom,#8882_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] opacity-30" />
@@ -814,10 +836,10 @@ export default function App() {
                     return (
                       <motion.div 
                         key={link.id}
-                        initial={{ opacity: 0, y: 15 }}
+                        initial={{ opacity: 0, y: 12 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: false, margin: "50px" }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        viewport={{ once: true, margin: "60px" }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
                       >
                         <LinkCard
                           link={link}
@@ -910,6 +932,24 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Floating Scroll-To-Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 15 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            onClick={scrollToTop}
+            className="fixed bottom-6 right-6 z-40 p-3.5 bg-white/90 hover:bg-white text-[#5c0620] hover:text-[#3a0210] rounded-2xl shadow-[0_8px_30px_rgba(92,6,32,0.15)] border border-white/80 hover:border-rose-200 backdrop-blur-xl transition-all cursor-pointer group hover:scale-105 active:scale-95"
+            title="เลื่อนขึ้นด้านบนสุด"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* 4. MODAL: ADMIN LOGIN */}
       {showAdminModal && (
