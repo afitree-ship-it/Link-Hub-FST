@@ -28,21 +28,54 @@ var SHEET_NAME = "Links";
 var SETTINGS_SHEET_NAME = "Settings";
 var ADMINS_SHEET_NAME = "Admins";
 
-// 👉 ฟังก์ชันสำหรับรันครั้งแรกเพื่อสร้างชีต (กด "เรียกใช้" ที่ฟังก์ชันนี้ได้เลย)
+// 👉 ฟังก์ชันสำหรับรันครั้งแรกเพื่อสร้างชีตทั้งหมด (กด "เรียกใช้" ได้เลย)
 function initialSetup() {
-  var sheet = getSheet();
-  var settingsSheet = getSettingsSheet();
-  var adminsSheet = getAdminsSheet();
-  Logger.log("✅ สร้างชีตสำเร็จ ชื่อ: " + sheet.getName() + ", " + settingsSheet.getName() + ", " + adminsSheet.getName());
+  var ss = getSS();
+  
+  // 1. ชีต Links
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow([
+      "ID", "Title", "URL", "Description", "Is Staff Only", "Click Count", "Created At", "Thumbnail URL", "Is Pinned"
+    ]);
+    sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+  }
+
+  // 2. ชีต Settings
+  var settingsSheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+  if (!settingsSheet) {
+    settingsSheet = ss.insertSheet(SETTINGS_SHEET_NAME);
+    settingsSheet.appendRow(["Key", "Value"]);
+    settingsSheet.getRange(1, 1, 1, 2).setFontWeight("bold").setBackground("#3B82F6").setFontColor("#FFFFFF");
+    settingsSheet.appendRow(["siteTitle", "SciTech Link Portal"]);
+    settingsSheet.appendRow(["siteLogoUrl", ""]);
+    settingsSheet.appendRow(["announcementText", ""]);
+    settingsSheet.appendRow(["isAnnouncementActive", "false"]);
+  }
+
+  // 3. ชีต Admins
+  var adminsSheet = ss.getSheetByName(ADMINS_SHEET_NAME);
+  if (!adminsSheet) {
+    adminsSheet = ss.insertSheet(ADMINS_SHEET_NAME);
+    adminsSheet.appendRow(["Username", "Password", "Role", "PinnedLinks"]);
+    adminsSheet.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#E11D48").setFontColor("#FFFFFF");
+    adminsSheet.appendRow(["admin", "admin1234", "superadmin", "[]"]);
+  }
+
+  Logger.log("✅ สร้างชีตทั้งหมดสำเร็จ: Links, Settings, Admins");
+}
+
+function getSS() {
+  try {
+    return SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE" ? SpreadsheetApp.getActiveSpreadsheet() : SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (e) {
+    return SpreadsheetApp.getActiveSpreadsheet();
+  }
 }
 
 function getSheet() {
-  var ss;
-  try {
-    ss = SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE" ? SpreadsheetApp.getActiveSpreadsheet() : SpreadsheetApp.openById(SPREADSHEET_ID);
-  } catch (e) {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
-  }
+  var ss = getSS();
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
@@ -55,12 +88,7 @@ function getSheet() {
 }
 
 function getSettingsSheet() {
-  var ss;
-  try {
-    ss = SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE" ? SpreadsheetApp.getActiveSpreadsheet() : SpreadsheetApp.openById(SPREADSHEET_ID);
-  } catch (e) {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
-  }
+  var ss = getSS();
   var sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SETTINGS_SHEET_NAME);
@@ -71,50 +99,27 @@ function getSettingsSheet() {
 }
 
 function getAdminsSheet() {
-  var ss;
-  try {
-    ss = SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE" ? SpreadsheetApp.getActiveSpreadsheet() : SpreadsheetApp.openById(SPREADSHEET_ID);
-  } catch (e) {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
-  }
+  var ss = getSS();
   var sheet = ss.getSheetByName(ADMINS_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(ADMINS_SHEET_NAME);
     sheet.appendRow(["Username", "Password", "Role", "PinnedLinks"]);
-    sheet.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#EF4444").setFontColor("#FFFFFF");
-    // Default super admin (Change password immediately!)
+    sheet.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#E11D48").setFontColor("#FFFFFF");
     sheet.appendRow(["admin", "admin1234", "superadmin", "[]"]);
   }
   return sheet;
 }
 
-function verifyAuth(auth) {
-  if (!auth || !auth.username || !auth.password) return null;
-  var sheet = getAdminsSheet();
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(auth.username) && String(data[i][1]) === String(auth.password)) {
-      return {
-        rowIndex: i + 1,
-        username: data[i][0],
-        password: data[i][1], // sent back for client session only
-        role: data[i][2],
-        pinnedLinks: data[i][3] ? JSON.parse(data[i][3]) : []
-      };
-    }
-  }
-  return null;
-}
-
-// 📡 สำหรับรับข้อมูลลิงก์ดูสถานะผ่าน GET (ไม่เปิดเผยรหัสผ่าน!)
+// 📡 สำหรับดึงข้อมูลทั้งหมดผ่าน GET (Links + Settings)
 function doGet(e) {
   var out = { success: false, error: "Unknown Action" };
   try {
     if (!e) {
-      return ContentService.createTextOutput(JSON.stringify({success: false, message: "Please deploy as Web App and provide parameters."}))
+      return ContentService.createTextOutput(JSON.stringify({success: false, message: "Please deploy as Web App and access via URL."}))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    // ดึงข้อมูล Links
     var sheet = getSheet();
     var rows = sheet.getDataRange().getValues();
     var results = [];
@@ -136,17 +141,19 @@ function doGet(e) {
       }
     }
     
-    var settingsSheet = getSettingsSheet();
-    var settingsRows = settingsSheet.getDataRange().getValues();
+    // ดึงข้อมูล Settings
     var settings = {};
-    for (var j = 1; j < settingsRows.length; j++) {
-      var k = String(settingsRows[j][0]);
-      // ป้องกันการแอบดูรหัสผ่านระบบเก่า
-      if (k && k !== 'staffPasswords' && k !== 'adminPassword') {
-        settings[k] = String(settingsRows[j][1]);
+    try {
+      var settingsSheet = getSettingsSheet();
+      var settingsRows = settingsSheet.getDataRange().getValues();
+      for (var j = 1; j < settingsRows.length; j++) {
+        var key = String(settingsRows[j][0]).trim();
+        if (key && key !== "adminPassword" && key !== "staffPasswords") {
+          settings[key] = String(settingsRows[j][1]);
+        }
       }
-    }
-    
+    } catch (sErr) {}
+
     out = { success: true, data: results, settings: settings };
   } catch (err) {
     out = { success: false, error: err.toString() };
@@ -156,7 +163,7 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// 📡 สำหรับบันทึก ซิงค์ข้อมูล ลิงก์ผ่าน POST (ต้องมีการยืนยันตัวตน)
+// 📡 สำหรับบันทึก ซิงค์ข้อมูลทั้งหมดผ่าน POST
 function doPost(e) {
   var out = { success: false, error: "Invalid Action" };
   try {
@@ -168,73 +175,63 @@ function doPost(e) {
     var rawData = e.postData.contents;
     var postData = JSON.parse(rawData);
     var action = postData.action;
-    var auth = postData.auth;
-    
-    // 1. ระบบ Login ไม่ต้องใช้ Auth ก่อนหน้า
-    if (action === "login") {
-      var user = verifyAuth({ username: postData.username, password: postData.password });
-      if (user) {
-        return ContentService.createTextOutput(JSON.stringify({success: true, user: user}))
-          .setMimeType(ContentService.MimeType.JSON);
-      } else {
-        return ContentService.createTextOutput(JSON.stringify({success: false, error: "Invalid credentials"}))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-    }
-    
-    // 2. Action ที่เปิดสาธารณะ (การนับคลิก)
-    if (action === "incrementClick") {
-      var sheet = getSheet();
-      var id = postData.id;
-      var rows = sheet.getDataRange().getValues();
-      for (var i = 1; i < rows.length; i++) {
-        if (String(rows[i][0]) === String(id)) {
-          var currentClick = parseInt(rows[i][5] || "0", 10);
-          sheet.getRange(i + 1, 6).setValue(currentClick + 1);
-          break;
-        }
-      }
-      return ContentService.createTextOutput(JSON.stringify({success: true}))
-          .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // 3. ตรวจสอบการยืนยันตัวตน (Authentication) สำหรับการเปลี่ยนแปลงระบบ
-    var user = verifyAuth(auth);
-    if (!user) {
-       return ContentService.createTextOutput(JSON.stringify({success: false, error: "Unauthorized. Please check your credentials."}))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
     var sheet = getSheet();
     
+    // 1. ซิงค์ข้อมูลทั้งหมด (ทั้ง Links และ Settings)
     if (action === "sync") {
-      var links = postData.links || [];
-      var lastRow = sheet.getLastRow();
-      
-      if (lastRow > 1) {
-        sheet.getRange(2, 1, lastRow - 1, 9).clearContent();
-      }
-      
-      if (links.length > 0) {
-        var rows = [];
-        for (var i = 0; i < links.length; i++) {
-          var link = links[i];
-          rows.push([
-            link.id || "",
-            link.title || "",
-            link.url || "",
-            link.description || "",
-            link.isStaffOnly ? 'Yes' : 'No',
-            link.clickCount || 0,
-            link.createdAt || "",
-            link.thumbnailUrl || "",
-            link.isPinned ? 'Yes' : 'No'
-          ]);
+      if (postData.links && Array.isArray(postData.links)) {
+        var links = postData.links;
+        var lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+          sheet.getRange(2, 1, lastRow - 1, 9).clearContent();
         }
-        sheet.getRange(2, 1, rows.length, 9).setValues(rows);
+        if (links.length > 0) {
+          var rows = [];
+          for (var i = 0; i < links.length; i++) {
+            var link = links[i];
+            rows.push([
+              link.id || "",
+              link.title || "",
+              link.url || "",
+              link.description || "",
+              link.isStaffOnly ? 'Yes' : 'No',
+              link.clickCount || 0,
+              link.createdAt || "",
+              link.thumbnailUrl || "",
+              link.isPinned ? 'Yes' : 'No'
+            ]);
+          }
+          sheet.getRange(2, 1, rows.length, 9).setValues(rows);
+        }
       }
+      
+      if (postData.settings) {
+        var settingsSheet = getSettingsSheet();
+        var settings = postData.settings;
+        var sKeys = Object.keys(settings);
+        var sRows = settingsSheet.getDataRange().getValues();
+        for (var k = 0; k < sKeys.length; k++) {
+          var kName = sKeys[k];
+          var val = settings[kName];
+          var foundK = false;
+          for (var r = 1; r < sRows.length; r++) {
+            if (String(sRows[r][0]) === String(kName)) {
+              settingsSheet.getRange(r + 1, 2).setValue(val);
+              foundK = true;
+              break;
+            }
+          }
+          if (!foundK) {
+            settingsSheet.appendRow([kName, val]);
+            sRows.push([kName, val]);
+          }
+        }
+      }
+
       out = { success: true };
-    } else if (action === "add" || action === "update") {
+    } 
+    // 2. เพิ่มหรือแก้ไขลิงก์เดี่ยว
+    else if (action === "add" || action === "update") {
       var link = postData.link;
       var rows = sheet.getDataRange().getValues();
       var found = false;
@@ -257,19 +254,21 @@ function doPost(e) {
       }
       if (!found) {
         sheet.appendRow([
-            link.id || "",
-            link.title || "",
-            link.url || "",
-            link.description || "",
-            link.isStaffOnly ? 'Yes' : 'No',
-            link.clickCount || 0,
-            link.createdAt || "",
-            link.thumbnailUrl || "",
-            link.isPinned ? 'Yes' : 'No'
+          link.id || "",
+          link.title || "",
+          link.url || "",
+          link.description || "",
+          link.isStaffOnly ? 'Yes' : 'No',
+          link.clickCount || 0,
+          link.createdAt || "",
+          link.thumbnailUrl || "",
+          link.isPinned ? 'Yes' : 'No'
         ]);
       }
       out = { success: true };
-    } else if (action === "delete") {
+    } 
+    // 3. ลบลิงก์
+    else if (action === "delete") {
       var id = postData.id;
       var rows = sheet.getDataRange().getValues();
       for (var i = rows.length - 1; i >= 1; i--) {
@@ -278,17 +277,30 @@ function doPost(e) {
         }
       }
       out = { success: true };
-    } else if (action === "saveSettings") {
+    } 
+    // 4. บันทึกยอดนับคลิก
+    else if (action === "incrementClick") {
+      var id = postData.id;
+      var rows = sheet.getDataRange().getValues();
+      for (var i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]) === String(id)) {
+          var currentClick = parseInt(rows[i][5] || "0", 10);
+          sheet.getRange(i + 1, 6).setValue(currentClick + 1);
+          break;
+        }
+      }
+      out = { success: true };
+    } 
+    // 5. บันทึกการตั้งค่าเว็บไซต์ (Settings)
+    else if (action === "saveSettings") {
       var settingsSheet = getSettingsSheet();
       var settings = postData.settings || {};
       var keys = Object.keys(settings);
-      
       var rows = settingsSheet.getDataRange().getValues();
       for (var k = 0; k < keys.length; k++) {
         var key = keys[k];
         var value = settings[key];
         var foundKey = false;
-        
         for (var r = 1; r < rows.length; r++) {
           if (String(rows[r][0]) === String(key)) {
             settingsSheet.getRange(r + 1, 2).setValue(value);
@@ -296,64 +308,11 @@ function doPost(e) {
             break;
           }
         }
-        
         if (!foundKey) {
           settingsSheet.appendRow([key, value]);
           rows.push([key, value]); 
         }
       }
-      out = { success: true };
-    } 
-    // ---- ADMIN ACCOUNT MANAGEMENT ----
-    else if (action === "getAdmins") {
-      if (user.role !== "superadmin") {
-         return ContentService.createTextOutput(JSON.stringify({success: false, error: "Forbidden: Require SuperAdmin role"}))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      var sheetA = getAdminsSheet();
-      var dataA = sheetA.getDataRange().getValues();
-      var admins = [];
-      for (var i = 1; i < dataA.length; i++) {
-         admins.push({ username: String(dataA[i][0]), password: String(dataA[i][1]), role: String(dataA[i][2]) });
-      }
-      out = { success: true, admins: admins };
-    } else if (action === "saveAdmin") {
-      if (user.role !== "superadmin") {
-         return ContentService.createTextOutput(JSON.stringify({success: false, error: "Forbidden: Require SuperAdmin role"}))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      var sheetA = getAdminsSheet();
-      var dataA = sheetA.getDataRange().getValues();
-      var foundA = false;
-      for (var i = 1; i < dataA.length; i++) {
-         if (String(dataA[i][0]) === String(postData.admin.username)) {
-           sheetA.getRange(i + 1, 2).setValue(postData.admin.password);
-           sheetA.getRange(i + 1, 3).setValue(postData.admin.role);
-           foundA = true;
-           break;
-         }
-      }
-      if (!foundA) {
-         sheetA.appendRow([postData.admin.username, postData.admin.password, postData.admin.role, "[]"]);
-      }
-      out = { success: true };
-    } else if (action === "deleteAdmin") {
-      if (user.role !== "superadmin") {
-         return ContentService.createTextOutput(JSON.stringify({success: false, error: "Forbidden: Require SuperAdmin role"}))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      var sheetA = getAdminsSheet();
-      var dataA = sheetA.getDataRange().getValues();
-      for (var i = 1; i < dataA.length; i++) {
-         if (String(dataA[i][0]) === String(postData.username)) {
-           sheetA.deleteRow(i + 1);
-           break;
-         }
-      }
-      out = { success: true };
-    } else if (action === "updatePins") {
-      var sheetA = getAdminsSheet();
-      sheetA.getRange(user.rowIndex, 4).setValue(JSON.stringify(postData.pinnedLinks || []));
       out = { success: true };
     }
   } catch (err) {
@@ -362,7 +321,7 @@ function doPost(e) {
   
   return ContentService.createTextOutput(JSON.stringify(out))
     .setMimeType(ContentService.MimeType.JSON);
-}`;
+};`;
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   isOpen,
@@ -1544,8 +1503,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         />
                       </div>
 
-                      <div className="pt-2">
+                      <div className="pt-2 flex flex-wrap items-center gap-3">
                         <button
+                          type="button"
                           onClick={async () => {
                             try {
                               setIsSubmitting(true);
@@ -1553,20 +1513,72 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 showAlert("กรุณาระบุ Web App URL ก่อน", "error");
                                 return;
                               }
-                              const { syncViaWebApp } = await import('../googleSheets');
-                              await syncViaWebApp(adminConfig.googleAppsScriptUrl, links);
-                              showAlert("บันทึกการตั้งค่า และซิงค์ข้อมูลไปยัง Google Sheets สำเร็จ");
-                            } catch (err) {
-                              showAlert("บันทึกสำเร็จ แต่การซิงค์ข้อมูลเกิดข้อผิดพลาด ตรวจสอบ URL", "error");
+                              const { syncAllViaWebApp } = await import('../googleSheets');
+                              const adminUsers = JSON.parse(localStorage.getItem("scitech_admin_users") || "[]");
+                              await syncAllViaWebApp(
+                                adminConfig.googleAppsScriptUrl,
+                                links,
+                                {
+                                  siteTitle: adminConfig.siteTitle || "",
+                                  siteLogoUrl: adminConfig.siteLogoUrl || "",
+                                  announcementText: adminConfig.announcementText || "",
+                                  isAnnouncementActive: adminConfig.isAnnouncementActive ? "true" : "false",
+                                },
+                                adminUsers
+                              );
+                              showAlert("✅ ซิงค์ข้อมูลทั้งหมด (ลิงก์, ข้อมูลเว็บ, ประกาศ) ไปยัง Google Sheets สำเร็จเรียบร้อย!");
+                            } catch (err: any) {
+                              showAlert("การซิงค์ข้อมูลเกิดข้อผิดพลาด: " + (err?.message || "ตรวจสอบ URL"), "error");
                             } finally {
                               setIsSubmitting(false);
                             }
                           }}
                           disabled={isSubmitting}
-                          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                         >
                           {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          <span>บันทึกการตั้งค่าและซิงค์ข้อมูลทันที</span>
+                          <span>ซิงค์ข้อมูลทั้งหมดไปยัง Google Sheets ทันที</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              setIsSubmitting(true);
+                              if (!adminConfig.googleAppsScriptUrl) {
+                                showAlert("กรุณาระบุ Web App URL ก่อน", "error");
+                                return;
+                              }
+                              const { fetchFromWebApp } = await import('../googleSheets');
+                              const res = await fetchFromWebApp(adminConfig.googleAppsScriptUrl);
+                              if (res.success && res.data) {
+                                localStorage.setItem("scitech_links", JSON.stringify(res.data));
+                                if (res.settings) {
+                                  const updatedCfg = { ...adminConfig };
+                                  if (res.settings.siteTitle) updatedCfg.siteTitle = res.settings.siteTitle;
+                                  if (res.settings.siteLogoUrl) updatedCfg.siteLogoUrl = res.settings.siteLogoUrl;
+                                  if (res.settings.announcementText !== undefined) updatedCfg.announcementText = res.settings.announcementText;
+                                  if (res.settings.isAnnouncementActive !== undefined) {
+                                    updatedCfg.isAnnouncementActive = res.settings.isAnnouncementActive === true || res.settings.isAnnouncementActive === "true";
+                                  }
+                                  await onUpdateConfig(updatedCfg);
+                                }
+                                showAlert(`✅ ดึงข้อมูลสำเร็จ! พบข้อมูลลิงก์ทั้งหมด ${res.data.length} รายการ (กำลังรีเฟรช...)`);
+                                setTimeout(() => window.location.reload(), 1200);
+                              } else {
+                                showAlert("ดึงข้อมูลไม่สำเร็จ: " + (res.error || "ไม่พบข้อมูลที่ถูกต้อง"), "error");
+                              }
+                            } catch (err: any) {
+                              showAlert("ดึงข้อมูลไม่สำเร็จ: " + (err?.message || "โปรดตรวจสอบสิทธิ์ของ Web App"), "error");
+                            } finally {
+                              setIsSubmitting(false);
+                            }
+                          }}
+                          disabled={isSubmitting}
+                          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          <span>ดึงข้อมูลล่าสุดจาก Google Sheets</span>
                         </button>
                       </div>
 

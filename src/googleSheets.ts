@@ -122,6 +122,31 @@ export const syncViaWebApp = async (url: string, links: any[], auth?: AuthCreden
   return sendActionToWebApp(url, 'sync', { links }, auth);
 };
 
+export const syncAllViaWebApp = async (url: string, links: any[], settings?: any, admins?: any[]) => {
+  return sendActionToWebApp(url, 'sync', { links, settings, admins });
+};
+
+export const fetchFromWebApp = async (url: string): Promise<{ success: boolean; data?: any[]; settings?: any; error?: string }> => {
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    if (!res.ok) {
+      return { success: false, error: `HTTP ${res.status}` };
+    }
+    const json = await res.json();
+    if (Array.isArray(json)) {
+      return { success: true, data: json };
+    }
+    return json;
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to connect to Web App' };
+  }
+};
+
 export const saveSettingsViaWebApp = async (url: string, settings: any, auth?: AuthCredentials) => {
   return sendActionToWebApp(url, 'saveSettings', { settings }, auth);
 };

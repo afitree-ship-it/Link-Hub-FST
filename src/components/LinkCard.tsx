@@ -14,7 +14,7 @@ interface LinkCardProps {
   isPersonalPin?: boolean;
 }
 
-export const LinkCard: React.FC<LinkCardProps> = ({
+export const LinkCard: React.FC<LinkCardProps> = React.memo(({
   link,
   isAdmin,
   layoutMode = "grid",
@@ -48,9 +48,9 @@ export const LinkCard: React.FC<LinkCardProps> = ({
       target="_blank"
       rel="noopener noreferrer"
       whileHover={{ y: -2, scale: layoutMode === "grid" ? 1.01 : 1.002 }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       onClick={handleClick}
-      className={`group relative flex bg-white/70 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white/80 hover:border-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_30px_rgba(92,6,32,0.12)] transition-all duration-300 cursor-pointer overflow-hidden ${
+      className={`group relative flex bg-white/70 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white/80 hover:border-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_30px_rgba(92,6,32,0.12)] transition-all duration-200 cursor-pointer overflow-hidden transform-gpu will-change-transform ${
         layoutMode === "grid" ? "flex-col h-full" : 
         layoutMode === "list" ? "flex-col sm:flex-row h-auto sm:h-32" : 
         "flex-row items-center py-2 px-3 sm:px-4 h-auto"
@@ -64,8 +64,10 @@ export const LinkCard: React.FC<LinkCardProps> = ({
           <img
             src={link.thumbnailUrl || getFallbackImage()}
             alt={link.title}
+            loading="lazy"
+            decoding="async"
             referrerPolicy="no-referrer"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div className={`absolute inset-0 bg-gradient-to-t ${layoutMode === "grid" ? "from-slate-950/60 via-slate-950/20" : "from-slate-950/60 sm:from-transparent sm:via-transparent sm:bg-gradient-to-r sm:from-slate-950/20 sm:to-transparent"} to-transparent`}></div>
           {(link.isPinned || isPersonalPin) && (
@@ -179,4 +181,4 @@ export const LinkCard: React.FC<LinkCardProps> = ({
       )}
     </motion.a>
   );
-};
+});

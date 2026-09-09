@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, AdminConfig, User, AuthCredentials } from "./types";
 import { DEFAULT_LINKS } from "./data/seed";
 import { LinkCard } from "./components/LinkCard";
-import { AdminPanel } from "./components/AdminPanel";
+import { LogoCelestialDust } from "./components/LogoCelestialDust";
+
+// Lazy-load heavy AdminPanel for faster initial bundle and instant page render
+const AdminPanel = React.lazy(() =>
+  import("./components/AdminPanel").then(module => ({ default: module.AdminPanel }))
+);
 import { 
   GraduationCap, 
   Search, 
@@ -92,11 +97,10 @@ export default function App() {
     });
   };
 
-  // Fetch Links & Configs
+  // Fetch Links & Configs (Cache-first / Stale-While-Revalidate for instant render)
   const fetchData = async () => {
-    setLoading(true);
     try {
-      // Load config
+      // 1. Load config from localStorage
       const savedConfig = localStorage.getItem("scitech_admin_config");
       let currentConfig: AdminConfig = {};
       if (savedConfig) {
@@ -108,6 +112,12 @@ export default function App() {
       // Default configs if empty
       if (!currentConfig.googleSheetId) currentConfig.googleSheetId = "1pphCw3O30znOqQeyAgYsv9P4M6SRVGFVdn_aDbDqwPY";
       
+      const defaultGASUrl = ((import.meta as any).env?.VITE_GOOGLE_APPS_SCRIPT_URL as string) || "";
+      if (!currentConfig.googleAppsScriptUrl && defaultGASUrl) {
+        currentConfig.googleAppsScriptUrl = defaultGASUrl;
+        currentConfig.isGoogleSheetSyncEnabled = true;
+      }
+
       const BROKEN_SAMPLE_URL = "https://script.google.com/macros/s/AKfycbzdXp6CR3w67Ulw4ckaexumuYicKEsrnKYJZ7aoZVqcmdRug2ugJncRDmIZPetO-Pw5pg/exec";
       if (currentConfig.googleAppsScriptUrl === BROKEN_SAMPLE_URL) {
         currentConfig.googleAppsScriptUrl = "";
@@ -115,31 +125,89 @@ export default function App() {
       
       if (currentConfig.isGoogleSheetSyncEnabled === undefined) currentConfig.isGoogleSheetSyncEnabled = false;
       if (!currentConfig.syncInterval) currentConfig.syncInterval = 15;
-      
-      setAdminConfig(currentConfig);
 
-      // Load Links
+      // 2. Load Links from localStorage first
       const savedLinks = localStorage.getItem("scitech_links");
       let linkList: Link[] = [];
       if (savedLinks) {
-        linkList = JSON.parse(savedLinks);
+        try {
+          linkList = JSON.parse(savedLinks);
+        } catch (e) {}
       }
 
-      // Auto Seed if completely empty
+      // 3. Auto Seed if completely empty
       if (linkList.length === 0) {
-        console.log("No links found. Seeding initial data...");
         linkList = DEFAULT_LINKS().map((l, i) => ({
           id: `seed-link-${i}`,
           ...l
         }));
-
         localStorage.setItem("scitech_links", JSON.stringify(linkList));
       }
 
+      // ⚡ INSTANT RENDER: Present content instantly without waiting for network cold starts!
+      setAdminConfig(currentConfig);
       setLinks(linkList);
+      setLoading(false);
+
+      // 🔄 ASYNC BACKGROUND SYNC: If Google Apps Script is configured and enabled, refresh in background
+      if (currentConfig.googleAppsScriptUrl && currentConfig.isGoogleSheetSyncEnabled) {
+        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
+        fetch(currentConfig.googleAppsScriptUrl, { signal: controller?.signal })
+          .then(res => res.ok ? res.json() : null)
+          .then(resJson => {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (!resJson) return;
+            let fetchedLinks: any = null;
+            if (Array.isArray(resJson)) {
+              fetchedLinks = resJson;
+            } else if (resJson.success && Array.isArray(resJson.data)) {
+              fetchedLinks = resJson.data;
+            }
+            if (fetchedLinks && fetchedLinks.length > 0) {
+              setLinks(prev => {
+                if (JSON.stringify(prev) !== JSON.stringify(fetchedLinks)) {
+                  localStorage.setItem("scitech_links", JSON.stringify(fetchedLinks));
+                  return fetchedLinks;
+                }
+                return prev;
+              });
+            }
+            if (resJson.settings) {
+              let changed = false;
+              const merged = { ...currentConfig };
+              if (resJson.settings.siteTitle && resJson.settings.siteTitle !== merged.siteTitle) {
+                merged.siteTitle = resJson.settings.siteTitle;
+                changed = true;
+              }
+              if (resJson.settings.siteLogoUrl && resJson.settings.siteLogoUrl !== merged.siteLogoUrl) {
+                merged.siteLogoUrl = resJson.settings.siteLogoUrl;
+                changed = true;
+              }
+              if (resJson.settings.announcementText !== undefined && resJson.settings.announcementText !== merged.announcementText) {
+                merged.announcementText = resJson.settings.announcementText;
+                changed = true;
+              }
+              if (resJson.settings.isAnnouncementActive !== undefined) {
+                const isActive = resJson.settings.isAnnouncementActive === true || resJson.settings.isAnnouncementActive === "true";
+                if (isActive !== merged.isAnnouncementActive) {
+                  merged.isAnnouncementActive = isActive;
+                  changed = true;
+                }
+              }
+              if (changed) {
+                localStorage.setItem("scitech_admin_config", JSON.stringify(merged));
+                setAdminConfig(merged);
+              }
+            }
+          })
+          .catch(err => {
+            if (timeoutId) clearTimeout(timeoutId);
+            console.warn("Background initial sync notice:", err?.message || err);
+          });
+      }
     } catch (error) {
       console.error("Error loading local storage data:", error);
-    } finally {
       setLoading(false);
     }
   };
@@ -172,7 +240,7 @@ export default function App() {
   }, [adminConfig.siteTitle, adminConfig.siteLogoUrl]);
 
   // Handle click counter increment in LocalStorage and sync to Google Sheets
-  const handleIncrementClick = async (linkId: string) => {
+  const handleIncrementClick = useCallback(async (linkId: string) => {
     setLinks(prev => {
       const updated = prev.map(l => l.id === linkId ? { ...l, clickCount: (l.clickCount || 0) + 1 } : l);
       localStorage.setItem("scitech_links", JSON.stringify(updated));
@@ -187,7 +255,7 @@ export default function App() {
         console.error("Failed to sync click count to Google Sheets", err);
       }
     }
-  };
+  }, [adminConfig.isGoogleSheetSyncEnabled, adminConfig.googleAppsScriptUrl]);
 
   // Admin Methods
   const handleLogin = async (e: React.FormEvent) => {
@@ -420,6 +488,17 @@ export default function App() {
                     merged.siteLogoUrl = responseData.settings.siteLogoUrl;
                     changed = true;
                   }
+                  if (responseData.settings.announcementText !== undefined && responseData.settings.announcementText !== prev.announcementText) {
+                    merged.announcementText = responseData.settings.announcementText;
+                    changed = true;
+                  }
+                  if (responseData.settings.isAnnouncementActive !== undefined) {
+                    const activeVal = responseData.settings.isAnnouncementActive === true || responseData.settings.isAnnouncementActive === "true";
+                    if (activeVal !== prev.isAnnouncementActive) {
+                      merged.isAnnouncementActive = activeVal;
+                      changed = true;
+                    }
+                  }
                   if (changed) {
                     localStorage.setItem("scitech_admin_config", JSON.stringify(merged));
                     return merged;
@@ -609,46 +688,49 @@ export default function App() {
           <div className="mb-8 md:mb-10 text-center flex flex-col items-center">
             
             {/* Animated Logo Display (Technology / Cyber HUD Style) */}
-            {adminConfig.siteLogoUrl && (
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.8, type: "spring", bounce: 0.5 }}
+              className="relative mb-8 md:mb-10 group flex items-center justify-center w-32 h-32 md:w-40 md:h-40"
+            >
+              {/* Starlike Celestial Dust Particles (Clustered neatly behind logo, scatters on scroll down, gathers back on scroll up) */}
+              <LogoCelestialDust />
+
+              {/* Tech HUD Ring 1 (Outer Dashed) */}
               <motion.div 
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.8, type: "spring", bounce: 0.5 }}
-                className="relative mb-8 md:mb-10 group flex items-center justify-center w-32 h-32 md:w-40 md:h-40"
+                className="absolute inset-0 -m-3 rounded-full border-2 border-dashed border-[#5c0620]/30 opacity-70"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
+              />
+              
+              {/* Tech HUD Ring 2 (Middle Dotted) */}
+              <motion.div 
+                className="absolute inset-0 m-0.5 rounded-full border-[3px] border-dotted border-rose-500/40"
+                animate={{ rotate: -360 }}
+                transition={{ repeat: Infinity, duration: 18, ease: "linear" }}
+              />
+
+              {/* Tech HUD Ring 3 (Inner Tech glow) */}
+              <motion.div 
+                className="absolute inset-2 rounded-full border border-[#5c0620]/20 shadow-[0_0_25px_rgba(92,6,32,0.15)] bg-white/60 backdrop-blur-md"
+                animate={{ scale: [1, 1.03, 1], opacity: [0.8, 1, 0.8] }}
+                transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+              />
+
+              {/* Scanner line overlay */}
+              <motion.div
+                className="absolute inset-0 overflow-hidden rounded-full z-20 pointer-events-none opacity-40 mix-blend-overlay"
               >
-                {/* Tech HUD Ring 1 (Outer Dashed) */}
-                <motion.div 
-                  className="absolute inset-0 -m-3 rounded-full border-2 border-dashed border-[#5c0620]/30 opacity-70"
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
-                />
-                
-                {/* Tech HUD Ring 2 (Middle Dotted) */}
-                <motion.div 
-                  className="absolute inset-0 m-0.5 rounded-full border-[3px] border-dotted border-rose-500/40"
-                  animate={{ rotate: -360 }}
-                  transition={{ repeat: Infinity, duration: 18, ease: "linear" }}
-                />
+                 <motion.div 
+                   className="w-full h-1.5 bg-gradient-to-r from-transparent via-[#5c0620] to-transparent shadow-[0_0_8px_#5c0620]"
+                   animate={{ y: [-150, 150] }}
+                   transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+                 />
+              </motion.div>
 
-                {/* Tech HUD Ring 3 (Inner Tech glow) */}
-                <motion.div 
-                  className="absolute inset-2 rounded-full border border-[#5c0620]/20 shadow-[0_0_25px_rgba(92,6,32,0.15)] bg-white/60 backdrop-blur-md"
-                  animate={{ scale: [1, 1.03, 1], opacity: [0.8, 1, 0.8] }}
-                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                />
-
-                {/* Scanner line overlay */}
-                <motion.div
-                  className="absolute inset-0 overflow-hidden rounded-full z-20 pointer-events-none opacity-40 mix-blend-overlay"
-                >
-                   <motion.div 
-                     className="w-full h-1.5 bg-gradient-to-r from-transparent via-[#5c0620] to-transparent shadow-[0_0_8px_#5c0620]"
-                     animate={{ y: [-150, 150] }}
-                     transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-                   />
-                </motion.div>
-
-                {/* Logo Image */}
+              {/* Logo Image or Brand Emblem */}
+              {adminConfig.siteLogoUrl ? (
                 <motion.img 
                   src={adminConfig.siteLogoUrl} 
                   alt="Site Logo" 
@@ -656,8 +738,16 @@ export default function App() {
                   whileHover={{ scale: 1.08, rotate: 2 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 />
-              </motion.div>
-            )}
+              ) : (
+                <motion.div 
+                  className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center relative z-10 drop-shadow-[0_0_12px_rgba(92,6,32,0.4)] p-1.5"
+                  whileHover={{ scale: 1.08, rotate: 2 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <GraduationCap className="w-16 h-16 md:w-20 md:h-20 text-[#5c0620]" />
+                </motion.div>
+              )}
+            </motion.div>
 
             <div className="space-y-3 md:space-y-4 flex flex-col items-center">
               <div className="flex items-center gap-2 flex-wrap justify-center">
@@ -836,10 +926,11 @@ export default function App() {
                     return (
                       <motion.div 
                         key={link.id}
-                        initial={{ opacity: 0, y: 12 }}
+                        initial={{ opacity: 0, y: 8 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, margin: "60px" }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        viewport={{ once: true, margin: "100px" }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="link-card-contain"
                       >
                         <LinkCard
                           link={link}
@@ -1086,23 +1177,27 @@ export default function App() {
         </div>
       )}
 
-      {/* 5. MODAL: ADMIN CONTROL PANEL (CRUD WORKSPACE) */}
-      <AdminPanel
-        isOpen={showAdminPanel}
-        onClose={() => {
-          setShowAdminPanel(false);
-          // Re-fetch data on close to ensure UI matches any edits made in Panel
-          fetchData();
-        }}
-        links={links}
-        currentUser={currentUser}
-        authCreds={authCreds}
-        adminConfig={adminConfig}
-        onUpdateConfig={handleUpdateConfig}
-        onAddLink={handleAddLink}
-        onUpdateLink={handleUpdateLink}
-        onDeleteLink={handleDeleteLink}
-      />
+      {/* 5. MODAL: ADMIN CONTROL PANEL (CRUD WORKSPACE) - LAZY LOADED */}
+      {showAdminPanel && (
+        <React.Suspense fallback={null}>
+          <AdminPanel
+            isOpen={showAdminPanel}
+            onClose={() => {
+              setShowAdminPanel(false);
+              // Re-fetch data on close to ensure UI matches any edits made in Panel
+              fetchData();
+            }}
+            links={links}
+            currentUser={currentUser}
+            authCreds={authCreds}
+            adminConfig={adminConfig}
+            onUpdateConfig={handleUpdateConfig}
+            onAddLink={handleAddLink}
+            onUpdateLink={handleUpdateLink}
+            onDeleteLink={handleDeleteLink}
+          />
+        </React.Suspense>
+      )}
 
     </div>
   );
