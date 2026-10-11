@@ -326,6 +326,18 @@ function doPost(e) {
       var user = findAdmin(postData.username, postData.password);
       out = user ? { success: true, user: user } : { success: false, error: "Invalid credentials" };
     }
+    // 6.1 เข้าหมวดบุคลากรด้วยรหัสผ่านอย่างเดียว (ตรงกับรหัสผ่านของบัญชีใดก็ได้ในชีต Admins)
+    else if (action === "staffLogin") {
+      var pw = String(postData.password || "");
+      var ok = false;
+      if (pw) {
+        var aRows = getAdminsSheet().getDataRange().getValues();
+        for (var sr = 1; sr < aRows.length; sr++) {
+          if (String(aRows[sr][0]) && String(aRows[sr][1]) === pw) { ok = true; break; }
+        }
+      }
+      out = ok ? { success: true } : { success: false, error: "Invalid password" };
+    }
     // 7. เพิ่มหรือแก้ไขแอดมิน (เฉพาะ superadmin หรือแก้รหัสผ่านตัวเอง)
     else if (action === "saveAdmin") {
       var me = findAdmin(postData.auth && postData.auth.username, postData.auth && postData.auth.password);

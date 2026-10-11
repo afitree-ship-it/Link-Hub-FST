@@ -61,7 +61,6 @@ export default function App() {
   // Staff Access States
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [staffPasswordInput, setStaffPasswordInput] = useState("");
-  const [staffUsernameInput, setStaffUsernameInput] = useState("");
   const [isStaffChecking, setIsStaffChecking] = useState(false);
   const [staffLoginError, setStaffLoginError] = useState("");
 
@@ -372,22 +371,48 @@ export default function App() {
     }
   };
 
-  // Staff get in with either their own account (made by the main admin in the back office)
-  // or a shared staff code. Either way this only unlocks staff links, never admin tools.
+  // Staff type one password: a shared staff code, or the password of any account in the
+  // Admins sheet (accounts the main admin creates in the back office). It only unlocks staff links.
+  const checkStaffPassword = async (password: string): Promise<boolean> => {
+    const code = password.trim();
+    if (!code) return false;
+    const hash = await hashStaffCode(code);
+    if ((adminConfig.staffCodeHashes || []).includes(hash) || (adminConfig.staffPasswords || []).includes(code)) return true;
+
+    try {
+      const cached: (User & { password?: string })[] = JSON.parse(localStorage.getItem("scitech_admin_users") || "[]");
+      if (cached.some(u => u.password === password)) return true;
+    } catch (err) {}
+
+    if (adminConfig.googleAppsScriptUrl) {
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
+      try {
+        const response = await fetch(adminConfig.googleAppsScriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'staffLogin', password }),
+          signal: controller ? controller.signal : undefined,
+        });
+        let resData: any = null;
+        try { resData = JSON.parse(await response.text()); } catch (e) {}
+        if (resData && resData.success) return true;
+      } catch (err) {
+        console.warn("Staff password check via Apps Script failed:", err);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    }
+    return false;
+  };
+
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const username = staffUsernameInput.trim();
-    const code = staffPasswordInput.trim();
     setStaffLoginError("");
     setIsStaffChecking(true);
     let valid = false;
     try {
-      if (username) {
-        valid = !!(await verifyAccount(username, staffPasswordInput));
-      } else if (code) {
-        const hash = await hashStaffCode(code);
-        valid = (adminConfig.staffCodeHashes || []).includes(hash) || (adminConfig.staffPasswords || []).includes(code);
-      }
+      valid = await checkStaffPassword(staffPasswordInput);
     } finally {
       setIsStaffChecking(false);
     }
@@ -395,11 +420,10 @@ export default function App() {
       sessionStorage.setItem("scitech_staff_session", "true");
       setShowStaffModal(false);
       setStaffPasswordInput("");
-      setStaffUsernameInput("");
       setStaffLoginError("");
       setViewMode("staff");
     } else {
-      setStaffLoginError(username ? "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" : "รหัสไม่ถูกต้อง ขอรหัสจากแอดมินของคณะ");
+      setStaffLoginError("รหัสไม่ถูกต้อง ขอรหัสจากแอดมินของคณะ");
     }
   };
 
@@ -1096,30 +1120,20 @@ export default function App() {
                 <ShieldAlert className="w-6 h-6 text-rose-500" />
               </div>
               <h3 className="text-xl font-bold text-slate-800 text-center">เข้าใช้งานหมวดหมู่บุคลากร</h3>
-              <p className="text-xs text-slate-500 text-center mt-2 px-4">ใช้บัญชีบุคลากรที่ได้รับจากแอดมิน หรือเว้นชื่อผู้ใช้ว่างแล้วใส่รหัสบุคลากร</p>
+              <p className="text-xs text-slate-500 text-center mt-2 px-4">กรอกรหัสที่ได้รับจากแอดมินของคณะ</p>
             </div>
-            <form onSubmit={handleStaffLogin} className="space-y-3">
+            <form onSubmit={handleStaffLogin} className="space-y-4">
               <div>
-                <label htmlFor="staff-username" className="text-xs font-semibold text-slate-600 block mb-1">ชื่อผู้ใช้ <span className="font-normal text-slate-500">(ไม่ต้องกรอกถ้าใช้รหัสบุคลากร)</span></label>
-                <input
-                  id="staff-username"
-                  type="text"
-                  autoComplete="username"
-                  autoFocus
-                  value={staffUsernameInput}
-                  onChange={(e) => setStaffUsernameInput(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm bg-slate-50 focus:bg-white transition-all"
-                />
-              </div>
-              <div>
-                <label htmlFor="staff-password" className="text-xs font-semibold text-slate-600 block mb-1">รหัสผ่าน / รหัสบุคลากร</label>
+                <label htmlFor="staff-password" className="sr-only">รหัสบุคลากร</label>
                 <input
                   id="staff-password"
                   type="password"
+                  placeholder="รหัสบุคลากร"
                   autoComplete="current-password"
+                  autoFocus
                   value={staffPasswordInput}
                   onChange={(e) => setStaffPasswordInput(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm bg-slate-50 focus:bg-white transition-all font-mono"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm bg-slate-50 focus:bg-white transition-all text-center tracking-widest font-mono"
                 />
               </div>
               {staffLoginError && (
