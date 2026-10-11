@@ -31,7 +31,7 @@ import {
   ArrowUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { sendActionToWebApp } from "./googleSheets";
+import { sendActionToWebApp, getLastWriteAt, WRITE_SETTLE_MS, DEFAULT_GAS_URL } from "./googleSheets";
 
 export default function App() {
   const [links, setLinks] = useState<Link[]>([]);
@@ -112,7 +112,7 @@ export default function App() {
       // Default configs if empty
       if (!currentConfig.googleSheetId) currentConfig.googleSheetId = "1pphCw3O30znOqQeyAgYsv9P4M6SRVGFVdn_aDbDqwPY";
       
-      const defaultGASUrl = ((import.meta as any).env?.VITE_GOOGLE_APPS_SCRIPT_URL as string) || "";
+      const defaultGASUrl = DEFAULT_GAS_URL;
       if (!currentConfig.googleAppsScriptUrl && defaultGASUrl) {
         currentConfig.googleAppsScriptUrl = defaultGASUrl;
         currentConfig.isGoogleSheetSyncEnabled = true;
@@ -123,8 +123,8 @@ export default function App() {
         currentConfig.googleAppsScriptUrl = "";
       }
       
-      if (currentConfig.isGoogleSheetSyncEnabled === undefined) currentConfig.isGoogleSheetSyncEnabled = false;
-      if (!currentConfig.syncInterval) currentConfig.syncInterval = 15;
+      if (currentConfig.isGoogleSheetSyncEnabled === undefined) currentConfig.isGoogleSheetSyncEnabled = !!currentConfig.googleAppsScriptUrl;
+      if (!currentConfig.syncInterval) currentConfig.syncInterval = 5;
 
       // 2. Load Links from localStorage first
       const savedLinks = localStorage.getItem("scitech_links");
@@ -153,7 +153,7 @@ export default function App() {
       if (currentConfig.googleAppsScriptUrl && currentConfig.isGoogleSheetSyncEnabled) {
         const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
         const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
-        fetch(currentConfig.googleAppsScriptUrl, { signal: controller?.signal })
+        fetch(currentConfig.googleAppsScriptUrl, { signal: controller?.signal, cache: "no-store" })
           .then(res => res.ok ? res.json() : null)
           .then(resJson => {
             if (timeoutId) clearTimeout(timeoutId);
@@ -444,6 +444,7 @@ export default function App() {
   useEffect(() => {
     if (adminConfig.googleAppsScriptUrl && adminConfig.isGoogleSheetSyncEnabled) {
       let isMounted = true;
+      let isFetching = false;
       let failureCount = 0;
 
       const fetchFromSheet = async () => {
@@ -455,12 +456,19 @@ export default function App() {
           return;
         }
 
+        // Skip background tabs; the visibility listener below refreshes on return
+        if (typeof document !== "undefined" && document.hidden) return;
+        if (isFetching) return;
+        isFetching = true;
+        const startedAt = Date.now();
+
         try {
           const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-          const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
+          const timeoutId = controller ? setTimeout(() => controller.abort(), 8000) : null;
 
           const res = await fetch(adminConfig.googleAppsScriptUrl, {
             signal: controller ? controller.signal : undefined,
+            cache: "no-store",
           });
           if (timeoutId) clearTimeout(timeoutId);
 
@@ -468,6 +476,9 @@ export default function App() {
             failureCount = 0; // Reset on successful fetch
             const responseData = await res.json().catch(() => null);
             if (!responseData) return;
+
+            // A local edit may still be in flight to the sheet; don't overwrite it with stale data
+            if (getLastWriteAt() > startedAt - WRITE_SETTLE_MS) return;
 
             // Handle both array directly and {success: true, data: [...]}
             let fetchedLinks: any = null;
@@ -526,16 +537,25 @@ export default function App() {
           failureCount++;
           // Quietly handle network or CORS restrictions so third-party URLs do not cause fatal errors
           console.warn("Could not sync from Google Apps Script Web App URL:", err?.message || err);
+        } finally {
+          isFetching = false;
         }
       };
 
       fetchFromSheet(); // Initial fetch
       
-      const intervalMs = Math.max(adminConfig.syncInterval || 15, 10) * 1000;
+      const intervalMs = Math.max(adminConfig.syncInterval || 5, 5) * 1000;
       const interval = setInterval(fetchFromSheet, intervalMs);
+      const onVisible = () => {
+        if (!document.hidden) fetchFromSheet();
+      };
+      document.addEventListener("visibilitychange", onVisible);
+      window.addEventListener("focus", onVisible);
       return () => {
         isMounted = false;
         clearInterval(interval);
+        document.removeEventListener("visibilitychange", onVisible);
+        window.removeEventListener("focus", onVisible);
       };
     }
   }, [adminConfig.googleAppsScriptUrl, adminConfig.isGoogleSheetSyncEnabled, adminConfig.syncInterval]);

@@ -98,7 +98,19 @@ export const syncLinksToGoogleSheet = async (spreadsheetId: string, links: Link[
   await updateSheetData(spreadsheetId, [headers, ...rows]);
 };
 
+// Apps Script Web App used by every visitor unless an admin overrides it
+export const DEFAULT_GAS_URL =
+  ((import.meta as any).env?.VITE_GOOGLE_APPS_SCRIPT_URL as string) ||
+  'https://script.google.com/macros/s/AKfycbxY-fNkxvzWl-v_OxRW2mLJNiityRyqmz9La03u3p65yUyP0AueIl9b33iJvVPibJ5ouQ/exec';
+
+// How long after a local write the poller ignores sheet data that may predate it
+export const WRITE_SETTLE_MS = 4000;
+
+let lastWriteAt = 0;
+export const getLastWriteAt = () => lastWriteAt;
+
 export const sendActionToWebApp = async (url: string, action: string, data: any = {}, auth?: AuthCredentials) => {
+  if (action !== 'incrementClick') lastWriteAt = Date.now();
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -115,6 +127,8 @@ export const sendActionToWebApp = async (url: string, action: string, data: any 
     // no-cors means response is opaque, we can't reliably read response.ok
   } catch (error) {
     console.warn(`Failed to execute ${action} via Web App:`, error);
+  } finally {
+    if (action !== 'incrementClick') lastWriteAt = Date.now();
   }
 };
 

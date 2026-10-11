@@ -166,6 +166,7 @@ function doGet(e) {
 // 📡 สำหรับบันทึก ซิงค์ข้อมูลทั้งหมดผ่าน POST
 function doPost(e) {
   var out = { success: false, error: "Invalid Action" };
+  var lock = null;
   try {
     if (!e || !e.postData) {
        return ContentService.createTextOutput(JSON.stringify({success: false, message: "No post data."}))
@@ -175,6 +176,11 @@ function doPost(e) {
     var rawData = e.postData.contents;
     var postData = JSON.parse(rawData);
     var action = postData.action;
+
+    // ล็อกไว้เพื่อไม่ให้คำขอที่เข้ามาพร้อมกันเขียนทับกัน
+    lock = LockService.getScriptLock();
+    lock.waitLock(20000);
+
     var sheet = getSheet();
     
     // 1. ซิงค์ข้อมูลทั้งหมด (ทั้ง Links และ Settings)
@@ -315,13 +321,93 @@ function doPost(e) {
       }
       out = { success: true };
     }
+    // 6. เข้าสู่ระบบด้วยบัญชีในชีต Admins
+    else if (action === "login") {
+      var user = findAdmin(postData.username, postData.password);
+      out = user ? { success: true, user: user } : { success: false, error: "Invalid credentials" };
+    }
+    // 7. เพิ่มหรือแก้ไขแอดมิน (เฉพาะ superadmin หรือแก้รหัสผ่านตัวเอง)
+    else if (action === "saveAdmin") {
+      var me = findAdmin(postData.auth && postData.auth.username, postData.auth && postData.auth.password);
+      var admin = postData.admin || {};
+      var isSelf = me && String(me.username).toLowerCase() === String(admin.username || "").toLowerCase();
+      if (!me || (me.role !== "superadmin" && !isSelf)) {
+        out = { success: false, error: "Unauthorized" };
+      } else {
+        var adminsSheet = getAdminsSheet();
+        var aRows = adminsSheet.getDataRange().getValues();
+        var aFound = false;
+        for (var a = 1; a < aRows.length; a++) {
+          if (String(aRows[a][0]).toLowerCase() === String(admin.username).toLowerCase()) {
+            adminsSheet.getRange(a + 1, 2).setValue(admin.password);
+            if (me.role === "superadmin" && admin.role) adminsSheet.getRange(a + 1, 3).setValue(admin.role);
+            aFound = true;
+            break;
+          }
+        }
+        if (!aFound) {
+          adminsSheet.appendRow([admin.username, admin.password, admin.role || "admin", "[]"]);
+        }
+        out = { success: true };
+      }
+    }
+    // 8. ลบแอดมิน (เฉพาะ superadmin)
+    else if (action === "deleteAdmin") {
+      var me2 = findAdmin(postData.auth && postData.auth.username, postData.auth && postData.auth.password);
+      if (!me2 || me2.role !== "superadmin") {
+        out = { success: false, error: "Unauthorized" };
+      } else {
+        var adminsSheet2 = getAdminsSheet();
+        var dRows = adminsSheet2.getDataRange().getValues();
+        for (var d = dRows.length - 1; d >= 1; d--) {
+          if (String(dRows[d][0]).toLowerCase() === String(postData.username).toLowerCase()) {
+            adminsSheet2.deleteRow(d + 1);
+          }
+        }
+        out = { success: true };
+      }
+    }
+    // 9. บันทึกลิงก์ที่ปักหมุดส่วนตัว
+    else if (action === "updatePins") {
+      var me3 = findAdmin(postData.auth && postData.auth.username, postData.auth && postData.auth.password);
+      if (!me3) {
+        out = { success: false, error: "Unauthorized" };
+      } else {
+        var adminsSheet3 = getAdminsSheet();
+        var pRows = adminsSheet3.getDataRange().getValues();
+        for (var q = 1; q < pRows.length; q++) {
+          if (String(pRows[q][0]).toLowerCase() === String(me3.username).toLowerCase()) {
+            adminsSheet3.getRange(q + 1, 4).setValue(JSON.stringify(postData.pinnedLinks || []));
+            break;
+          }
+        }
+        out = { success: true };
+      }
+    }
   } catch (err) {
     out = { success: false, error: err.toString() };
+  } finally {
+    if (lock) lock.releaseLock();
   }
   
   return ContentService.createTextOutput(JSON.stringify(out))
     .setMimeType(ContentService.MimeType.JSON);
-};`;
+}
+
+// ค้นหาแอดมินจากชีต Admins ด้วยชื่อผู้ใช้และรหัสผ่าน (ไม่ส่งรหัสผ่านกลับ)
+function findAdmin(username, password) {
+  if (!username || !password) return null;
+  var rows = getAdminsSheet().getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).toLowerCase() === String(username).toLowerCase() && String(rows[i][1]) === String(password)) {
+      var pins = [];
+      try { pins = JSON.parse(rows[i][3] || "[]"); } catch (e) {}
+      return { username: String(rows[i][0]), role: String(rows[i][2] || "admin"), pinnedLinks: pins };
+    }
+  }
+  return null;
+}
+`;
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   isOpen,
@@ -1497,8 +1583,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           type="number"
                           min="5"
                           placeholder="10"
-                          value={adminConfig.syncInterval || 10}
-                          onChange={(e) => onUpdateConfig({ syncInterval: parseInt(e.target.value, 10) || 10 })}
+                          value={adminConfig.syncInterval || 5}
+                          onChange={(e) => onUpdateConfig({ syncInterval: parseInt(e.target.value, 10) || 5 })}
                           className="w-full max-w-[150px] px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-mono"
                         />
                       </div>
