@@ -443,19 +443,42 @@ export default function App() {
       try {
         const { saveSettingsViaWebApp } = await import('./googleSheets');
         // Filter only settings to save (e.g. siteTitle, siteLogoUrl)
-        const settingsToSave: Record<string, string> = {
-          siteTitle: updated.siteTitle || "",
-          siteLogoUrl: updated.siteLogoUrl || "",
-        };
+        // Only send the settings this update touched, so a staff-code change never blanks the site title.
+        const settingsToSave: Record<string, string> = {};
+        if ("siteTitle" in newConfig) settingsToSave.siteTitle = updated.siteTitle || "";
+        if ("siteLogoUrl" in newConfig) settingsToSave.siteLogoUrl = updated.siteLogoUrl || "";
+        if ("announcementText" in newConfig) settingsToSave.announcementText = updated.announcementText || "";
+        if ("isAnnouncementActive" in newConfig) settingsToSave.isAnnouncementActive = String(!!updated.isAnnouncementActive);
         if (newConfig.staffCodeHashes) {
           settingsToSave.staffCodeHashes = JSON.stringify(newConfig.staffCodeHashes);
         }
-        await saveSettingsViaWebApp(updated.googleAppsScriptUrl, settingsToSave, authCreds);
+        if (Object.keys(settingsToSave).length > 0) {
+          await saveSettingsViaWebApp(updated.googleAppsScriptUrl, settingsToSave, authCreds);
+        }
       } catch (err) {
         console.error("Failed to sync settings to Google Sheets", err);
       }
     }
   };
+
+  // Staff codes created before codes were shared through the sheet live only in this
+  // admin's browser. Publish their hashes once an admin is signed in so staff can use them anywhere.
+  const publishedStaffHashes = React.useRef("");
+  useEffect(() => {
+    const localCodes = (adminConfig.staffPasswords || []).filter(c => c.trim());
+    if (!isAdmin || !authCreds || localCodes.length === 0) return;
+    let cancelled = false;
+    Promise.all(localCodes.map(hashStaffCode)).then(hashes => {
+      const known = adminConfig.staffCodeHashes || [];
+      const missing = hashes.filter(h => !known.includes(h));
+      const attempt = missing.sort().join(",");
+      if (!cancelled && missing.length > 0 && publishedStaffHashes.current !== attempt) {
+        publishedStaffHashes.current = attempt;
+        handleUpdateConfig({ staffCodeHashes: [...known, ...missing] });
+      }
+    });
+    return () => { cancelled = true; };
+  }, [isAdmin, authCreds, adminConfig.staffPasswords, adminConfig.staffCodeHashes]);
 
   // Realtime Polling from Google Apps Script Web App
   useEffect(() => {
