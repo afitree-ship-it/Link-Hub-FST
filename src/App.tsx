@@ -737,13 +737,14 @@ export default function App() {
     if (searchQuery) {
       return filteredLinks.map(link => ({ link, variant: "small" as BentoVariant, rank: undefined as number | undefined }));
     }
+    // Links the admin pinned get the big highlighted card; every other link uses the same card.
     const ranked = [...filteredLinks].sort((a, b) =>
       (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || (b.clickCount || 0) - (a.clickCount || 0)
     );
-    return ranked.map((link, i) => ({
+    return ranked.map(link => ({
       link,
-      variant: (i < 2 ? "feature" : i === 2 ? "wide" : "small") as BentoVariant,
-      rank: i < 2 && !link.isPinned ? i + 1 : undefined,
+      variant: (link.isPinned ? "wide" : "small") as BentoVariant,
+      rank: undefined as number | undefined,
     }));
   }, [filteredLinks, searchQuery]);
 
@@ -919,7 +920,7 @@ export default function App() {
 
           {/* Locked staff systems teaser */}
           {!loading && viewMode === "student" && staffLinkCount > 0 && !searchQuery && (
-            <div className="col-span-2 bg-[#e4dfdd] rounded-[22px] sm:rounded-[26px] p-4 flex items-center gap-3.5 min-h-[96px]">
+            <div className="col-span-2 lg:col-span-4 bg-[#e4dfdd] rounded-[22px] sm:rounded-[26px] p-4 flex items-center gap-3.5 min-h-[96px]">
               <span className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shrink-0">
                 <Lock className="w-5 h-5" aria-hidden="true" />
               </span>

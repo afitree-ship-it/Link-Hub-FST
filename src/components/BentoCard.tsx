@@ -152,6 +152,9 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
         <span className="relative"><SiteIcon link={link} index={index} size={56} radius={18} /></span>
         {mainLink("relative flex-1 min-w-0",
           <>
+            <span className="inline-flex items-center gap-1 mb-1.5 text-[12px] font-semibold bg-[#5c0620] text-white rounded-full px-2.5 py-0.5">
+              <Pin className="w-3 h-3" aria-hidden="true" />ปักหมุดโดยคณะ
+            </span>
             <span className="block text-[17px] sm:text-[22px] font-bold leading-snug">{link.title}</span>
             {link.description && <span className="mt-1 text-[13px] sm:text-[15px] text-[#d6cfd1] line-clamp-2 sm:line-clamp-1">{link.description}</span>}
           </>
@@ -165,24 +168,28 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
     );
   }
 
+  // Standard card: every link looks the same. Picture area is always there (the site's
+  // picture, or its icon on a soft tile) so cards line up row by row.
+  const tile = TILE_COLORS[index % TILE_COLORS.length];
   return (
     <div className={`${cardBase} bg-white flex flex-col h-full`}>
-      {hasImage && (
-        <div className="relative h-24 sm:h-28 bg-[#e4dfdd] overflow-hidden">
-          <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-        </div>
-      )}
-      <div className="flex-1 flex flex-col gap-2.5 sm:gap-3 p-3.5 sm:p-4">
-        {!hasImage && <SiteIcon link={link} index={index} size={44} radius={14} />}
+      <div className="relative aspect-[16/10] overflow-hidden flex items-center justify-center" style={hasImage ? { background: "#e4dfdd" } : { background: tile.bg }}>
+        {hasImage ? (
+          <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        ) : (
+          <SiteIcon link={link} index={index} size={56} radius={18} />
+        )}
+      </div>
+      <div className="flex-1 flex flex-col gap-2 p-3.5 sm:p-4">
         {mainLink("block flex-1 min-w-0",
           <>
-            <span className="block text-[14px] sm:text-[16px] font-semibold leading-snug text-[#1f1a1c]">{link.title}</span>
+            <span className="text-[14px] sm:text-[16px] font-semibold leading-snug text-[#1f1a1c] line-clamp-2">{link.title}</span>
             {link.description && <span className="hidden sm:line-clamp-2 mt-1 text-[13px] text-[#5e5558]">{link.description}</span>}
           </>
         )}
         {adminButtons(false)}
       </div>
-      <div className={`absolute ${hasImage ? "top-2 right-2" : "top-2.5 right-2.5"}`}>{pinButton}</div>
+      <div className="absolute top-2 right-2">{pinButton}</div>
     </div>
   );
 });
