@@ -872,8 +872,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsSubmitting(true);
     try {
       const updatedPasswords = [...staffPasswords, newStaffPassword.trim()];
+      const { hashStaffCode } = await import('../staffCodes');
+      const newHash = await hashStaffCode(newStaffPassword);
+      const existingHashes = adminConfig.staffCodeHashes || [];
       await onUpdateConfig({
-        staffPasswords: updatedPasswords
+        staffPasswords: updatedPasswords,
+        staffCodeHashes: existingHashes.includes(newHash) ? existingHashes : [...existingHashes, newHash]
       });
       setStaffPasswords(updatedPasswords);
       setNewStaffPassword("");
@@ -889,8 +893,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsSubmitting(true);
     try {
       const updatedPasswords = staffPasswords.filter(p => p !== passwordToRemove);
+      const { hashStaffCode } = await import('../staffCodes');
+      const removedHash = await hashStaffCode(passwordToRemove);
       await onUpdateConfig({
-        staffPasswords: updatedPasswords
+        staffPasswords: updatedPasswords,
+        staffCodeHashes: (adminConfig.staffCodeHashes || []).filter(h => h !== removedHash)
       });
       setStaffPasswords(updatedPasswords);
       showAlert("ลบรหัสผ่านสำหรับหมวดหมู่บุคลากรสำเร็จ");
@@ -1878,14 +1885,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-800">จัดการรหัสผ่านหมวดหมู่บุคลากร (Staff Passwords)</h3>
-                    <p className="text-xs text-slate-500">สามารถเพิ่มรหัสผ่านได้หลายชุด หากไม่มีรหัสผ่านในระบบเลย บุคลากรจะเข้าถึงได้โดยไม่ต้องใส่รหัสผ่าน</p>
+                    <p className="text-xs text-slate-500">ออกรหัสให้บุคลากรได้หลายชุด บุคลากรต้องใส่รหัสก่อนจึงจะกดปุ่ม "บุคลากร" ดูลิงก์สำหรับบุคลากรได้ ลบรหัสเมื่อต้องการยกเลิกสิทธิ์</p>
                   </div>
                 </div>
 
                 <div className="max-w-xl space-y-4">
                   {staffPasswords.length > 0 ? (
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-slate-600 block">รหัสผ่านที่ใช้งานอยู่ ({staffPasswords.length})</label>
+                      <label className="text-xs font-semibold text-slate-600 block">รหัสที่สร้างจากเครื่องนี้ ({staffPasswords.length}) · ใช้งานได้ทั้งหมดในระบบ {(adminConfig.staffCodeHashes || []).length} รหัส</label>
                       <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
                         {staffPasswords.map((pwd, idx) => (
                           <div key={idx} className={`flex items-center justify-between px-4 py-3 ${idx !== staffPasswords.length - 1 ? 'border-b border-slate-100' : ''}`}>
@@ -1905,7 +1912,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   ) : (
                     <div className="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
-                      ยังไม่มีรหัสผ่าน (เปิดสาธารณะสำหรับปุ่มนี้)
+                      ยังไม่มีรหัสที่สร้างจากเครื่องนี้ (รหัสที่ใช้งานได้ทั้งหมดในระบบ: {(adminConfig.staffCodeHashes || []).length} รหัส)
                     </div>
                   )}
 

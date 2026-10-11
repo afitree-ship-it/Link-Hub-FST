@@ -31,6 +31,7 @@ import {
   Pin
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { hashStaffCode, parseStaffCodeHashes } from "./staffCodes";
 import { sendActionToWebApp, getLastWriteAt, WRITE_SETTLE_MS, DEFAULT_GAS_URL } from "./googleSheets";
 
 export default function App() {
@@ -192,6 +193,13 @@ export default function App() {
                 const isActive = resJson.settings.isAnnouncementActive === true || resJson.settings.isAnnouncementActive === "true";
                 if (isActive !== merged.isAnnouncementActive) {
                   merged.isAnnouncementActive = isActive;
+                  changed = true;
+                }
+              }
+              if (resJson.settings.staffCodeHashes !== undefined) {
+                const hashes = parseStaffCodeHashes(resJson.settings.staffCodeHashes);
+                if (JSON.stringify(hashes) !== JSON.stringify(merged.staffCodeHashes || [])) {
+                  merged.staffCodeHashes = hashes;
                   changed = true;
                 }
               }
@@ -381,8 +389,8 @@ export default function App() {
   const handleStaffTabClick = () => {
     if (viewMode === "staff") return;
 
-    // Optional: Only staff can enter if they know the password. If admin is logged in, they can.
-    if (!adminConfig.staffPasswords || adminConfig.staffPasswords.length === 0 || isAdmin) {
+    // Staff links need a code issued by an admin. Logged-in admins skip the code.
+    if (isAdmin) {
       setViewMode("staff");
       return;
     }
@@ -395,16 +403,22 @@ export default function App() {
     }
   };
 
-  const handleStaffLogin = (e: React.FormEvent) => {
+  const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminConfig.staffPasswords && adminConfig.staffPasswords.includes(staffPasswordInput)) {
+    const code = staffPasswordInput.trim();
+    let valid = false;
+    if (code) {
+      const hash = await hashStaffCode(code);
+      valid = (adminConfig.staffCodeHashes || []).includes(hash) || (adminConfig.staffPasswords || []).includes(code);
+    }
+    if (valid) {
       sessionStorage.setItem("scitech_staff_session", "true");
       setShowStaffModal(false);
       setStaffPasswordInput("");
       setStaffLoginError("");
       setViewMode("staff");
     } else {
-      setStaffLoginError("รหัสผ่านไม่ถูกต้อง");
+      setStaffLoginError("รหัสไม่ถูกต้อง ขอรหัสจากแอดมินของคณะ");
     }
   };
 
@@ -429,10 +443,13 @@ export default function App() {
       try {
         const { saveSettingsViaWebApp } = await import('./googleSheets');
         // Filter only settings to save (e.g. siteTitle, siteLogoUrl)
-        const settingsToSave = {
+        const settingsToSave: Record<string, string> = {
           siteTitle: updated.siteTitle || "",
           siteLogoUrl: updated.siteLogoUrl || "",
         };
+        if (newConfig.staffCodeHashes) {
+          settingsToSave.staffCodeHashes = JSON.stringify(newConfig.staffCodeHashes);
+        }
         await saveSettingsViaWebApp(updated.googleAppsScriptUrl, settingsToSave, authCreds);
       } catch (err) {
         console.error("Failed to sync settings to Google Sheets", err);
@@ -507,6 +524,13 @@ export default function App() {
                     const activeVal = responseData.settings.isAnnouncementActive === true || responseData.settings.isAnnouncementActive === "true";
                     if (activeVal !== prev.isAnnouncementActive) {
                       merged.isAnnouncementActive = activeVal;
+                      changed = true;
+                    }
+                  }
+                  if (responseData.settings.staffCodeHashes !== undefined) {
+                    const hashes = parseStaffCodeHashes(responseData.settings.staffCodeHashes);
+                    if (JSON.stringify(hashes) !== JSON.stringify(prev.staffCodeHashes || [])) {
+                      merged.staffCodeHashes = hashes;
                       changed = true;
                     }
                   }

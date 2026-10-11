@@ -26,6 +26,7 @@ export interface AdminConfig {
   announcementText?: string;
   isAnnouncementActive?: boolean;
   staffPasswords?: string[];
+  staffCodeHashes?: string[];
   googleSheetId?: string;
   isGoogleSheetSyncEnabled?: boolean;
   googleAppsScriptUrl?: string;

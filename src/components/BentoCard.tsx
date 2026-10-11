@@ -87,13 +87,14 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
     </button>
   );
 
-  const adminButtons = isAdmin && (
-    <div className="relative z-10 flex gap-1">
-      <button type="button" onClick={onEdit} aria-label="แก้ไข" title="แก้ไข" className="w-9 h-9 rounded-full bg-white/90 text-amber-600 hover:bg-amber-50 flex items-center justify-center cursor-pointer shadow-sm">
-        <Edit2 className="w-4 h-4" />
+  // Admin tools sit in their own row so they never cover the title, badge or pin.
+  const adminButtons = (dark: boolean) => isAdmin && (
+    <div className="relative z-10 flex gap-2">
+      <button type="button" onClick={onEdit} className={`flex items-center gap-1.5 px-3 min-h-9 rounded-full text-[13px] font-semibold cursor-pointer ${dark ? "bg-white/15 text-white hover:bg-white/25" : "bg-amber-50 text-amber-800 hover:bg-amber-100"}`}>
+        <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />แก้ไข
       </button>
-      <button type="button" onClick={() => onDelete && onDelete(link.id)} aria-label="ลบ" title="ลบ" className="w-9 h-9 rounded-full bg-white/90 text-rose-600 hover:bg-rose-50 flex items-center justify-center cursor-pointer shadow-sm">
-        <Trash2 className="w-4 h-4" />
+      <button type="button" onClick={() => onDelete && onDelete(link.id)} className={`flex items-center gap-1.5 px-3 min-h-9 rounded-full text-[13px] font-semibold cursor-pointer ${dark ? "bg-white/15 text-white hover:bg-white/25" : "bg-rose-50 text-rose-800 hover:bg-rose-100"}`}>
+        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />ลบ
       </button>
     </div>
   );
@@ -121,23 +122,19 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
             <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
           </div>
         ) : null}
-        <div className={`absolute top-3 right-3 flex items-center gap-2`}>
-          {adminButtons}
-          {pinButton}
-        </div>
+        <div className="absolute top-3 right-3">{pinButton}</div>
         <div className="flex-1 flex flex-col justify-between gap-3 p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-2">
-            {!hasImage && <SiteIcon link={link} index={index} size={48} radius={16} />}
-            {rank ? (
-              <span className={`whitespace-nowrap text-[12px] font-semibold bg-[#f3f0ef] text-[#4a4245] rounded-full px-2.5 py-1 ${hasImage ? "" : "mr-12"}`}><span className="hidden sm:inline">ยอดนิยม </span>#{rank}</span>
-            ) : null}
-          </div>
+          {!hasImage && <SiteIcon link={link} index={index} size={48} radius={16} />}
           {mainLink("block",
             <>
+              {rank ? (
+                <span className="inline-block mb-1.5 whitespace-nowrap text-[12px] font-semibold bg-[#f3f0ef] text-[#4a4245] rounded-full px-2.5 py-0.5">ยอดนิยม #{rank}</span>
+              ) : null}
               <span className="block text-[16px] sm:text-[19px] font-bold leading-snug text-[#1f1a1c]">{link.title}</span>
               {link.description && <span className="mt-1 text-[13px] sm:text-[14px] text-[#5e5558] leading-relaxed line-clamp-2">{link.description}</span>}
             </>
           )}
+          {adminButtons(false)}
         </div>
       </div>
     );
@@ -145,7 +142,7 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
 
   if (variant === "wide") {
     return (
-      <div className={`${cardBase} bg-[#1f1a1c] text-white col-span-2 min-h-[96px] sm:min-h-[140px] flex items-center gap-4 sm:gap-5 p-4 sm:p-6`}>
+      <div className={`${cardBase} bg-[#1f1a1c] text-white col-span-2 min-h-[96px] sm:min-h-[140px] flex flex-wrap items-center content-center gap-x-4 gap-y-3 sm:gap-x-5 p-4 sm:p-6`}>
         {hasImage && (
           <>
             <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="absolute inset-0 w-full h-full object-cover opacity-35 transition-transform duration-300 group-hover:scale-105" />
@@ -160,10 +157,10 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
           </>
         )}
         <div className="relative flex items-center gap-2">
-          {adminButtons}
           {pinButton}
           <ArrowUpRight className="hidden sm:block w-7 h-7" aria-hidden="true" />
         </div>
+        {isAdmin && <div className="relative basis-full">{adminButtons(true)}</div>}
       </div>
     );
   }
@@ -183,11 +180,9 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
             {link.description && <span className="hidden sm:line-clamp-2 mt-1 text-[13px] text-[#5e5558]">{link.description}</span>}
           </>
         )}
+        {adminButtons(false)}
       </div>
-      <div className={`absolute ${hasImage ? "top-2 right-2" : "top-2.5 right-2.5"} flex items-center gap-1.5`}>
-        {adminButtons}
-        {pinButton}
-      </div>
+      <div className={`absolute ${hasImage ? "top-2 right-2" : "top-2.5 right-2.5"}`}>{pinButton}</div>
     </div>
   );
 });
