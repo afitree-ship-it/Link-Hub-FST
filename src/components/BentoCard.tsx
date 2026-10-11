@@ -140,37 +140,39 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
     );
   }
 
+  const tile = TILE_COLORS[index % TILE_COLORS.length];
+
+  // Admin-pinned link: twice as wide, the site picture shown in full, outlined in the faculty colour.
   if (variant === "wide") {
     return (
-      <div className={`${cardBase} bg-[#1f1a1c] text-white col-span-2 min-h-[96px] sm:min-h-[140px] flex flex-wrap items-center content-center gap-x-4 gap-y-3 sm:gap-x-5 p-4 sm:p-6`}>
-        {hasImage && (
-          <>
-            <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="absolute inset-0 w-full h-full object-cover opacity-35 transition-transform duration-300 group-hover:scale-105" />
-            <span className="absolute inset-0 bg-gradient-to-r from-[#1f1a1c] via-[#1f1a1c]/80 to-[#1f1a1c]/30" aria-hidden="true" />
-          </>
-        )}
-        <span className="relative"><SiteIcon link={link} index={index} size={56} radius={18} /></span>
-        {mainLink("relative flex-1 min-w-0",
-          <>
-            <span className="inline-flex items-center gap-1 mb-1.5 text-[12px] font-semibold bg-[#5c0620] text-white rounded-full px-2.5 py-0.5">
-              <Pin className="w-3 h-3" aria-hidden="true" />ปักหมุดโดยคณะ
-            </span>
-            <span className="block text-[17px] sm:text-[22px] font-bold leading-snug">{link.title}</span>
-            {link.description && <span className="mt-1 text-[13px] sm:text-[15px] text-[#d6cfd1] line-clamp-2 sm:line-clamp-1">{link.description}</span>}
-          </>
-        )}
-        <div className="relative flex items-center gap-2">
-          {pinButton}
-          <ArrowUpRight className="hidden sm:block w-7 h-7" aria-hidden="true" />
+      <div className={`${cardBase} bg-white col-span-2 ring-2 ring-[#5c0620] grid grid-cols-1 sm:grid-cols-2`}>
+        <div className="relative aspect-[16/10] sm:aspect-auto sm:min-h-[220px] overflow-hidden flex items-center justify-center" style={hasImage ? { background: "#e4dfdd" } : { background: tile.bg }}>
+          {hasImage ? (
+            <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          ) : (
+            <SiteIcon link={link} index={index} size={72} radius={22} />
+          )}
         </div>
-        {isAdmin && <div className="relative basis-full">{adminButtons(true)}</div>}
+        <div className="flex flex-col gap-3 p-4 sm:p-6">
+          {mainLink("block flex-1 min-w-0 pr-12",
+            <>
+              <span className="inline-flex items-center gap-1 mb-2 text-[12px] font-semibold bg-[#5c0620] text-white rounded-full px-2.5 py-0.5">
+                <Pin className="w-3 h-3" aria-hidden="true" />ปักหมุดโดยคณะ
+              </span>
+              <span className="block text-[18px] sm:text-[22px] font-bold leading-snug text-[#1f1a1c]">{link.title}</span>
+              {link.description && <span className="mt-1.5 text-[13px] sm:text-[15px] text-[#5e5558] leading-relaxed line-clamp-3">{link.description}</span>}
+              <span className="mt-3 inline-flex items-center gap-1 text-[14px] font-semibold text-[#5c0620]">เปิดเว็บไซต์ <ArrowUpRight className="w-4 h-4" aria-hidden="true" /></span>
+            </>
+          )}
+          {adminButtons(false)}
+        </div>
+        <div className="absolute top-2 right-2">{pinButton}</div>
       </div>
     );
   }
 
   // Standard card: every link looks the same. Picture area is always there (the site's
   // picture, or its icon on a soft tile) so cards line up row by row.
-  const tile = TILE_COLORS[index % TILE_COLORS.length];
   return (
     <div className={`${cardBase} bg-white flex flex-col h-full`}>
       <div className="relative aspect-[16/10] overflow-hidden flex items-center justify-center" style={hasImage ? { background: "#e4dfdd" } : { background: tile.bg }}>
