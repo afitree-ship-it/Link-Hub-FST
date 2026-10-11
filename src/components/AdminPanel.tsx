@@ -594,7 +594,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [newAdminUsername, setNewAdminUsername] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
-  const [newAdminRole, setNewAdminRole] = useState<"admin" | "superadmin">("admin");
+  const [newAdminRole, setNewAdminRole] = useState<"admin" | "superadmin" | "staff">("admin");
   const [myNewPassword, setMyNewPassword] = useState("");
 
   useEffect(() => {
@@ -2087,10 +2087,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               <label className="text-xs font-semibold text-slate-600 block">บทบาท (Role) <span className="text-rose-500">*</span></label>
                               <select 
                                  value={newAdminRole}
-                                 onChange={(e) => setNewAdminRole(e.target.value as "admin" | "superadmin")}
+                                 onChange={(e) => setNewAdminRole(e.target.value as "admin" | "superadmin" | "staff")}
                                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm bg-white"
                               >
                                  <option value="admin">Admin (ผู้ดูแลระบบ: ปักหมุดของตัวเอง, จัดการลิงก์ได้บางส่วน)</option>
+                                 <option value="staff">บุคลากร (ล็อกอินที่ปุ่ม &quot;บุคลากร&quot; เพื่อดูลิงก์บุคลากร เข้าหลังบ้านไม่ได้)</option>
                                  <option value="superadmin">Superadmin (ผู้ดูแลระบบสูงสุด: จัดการได้ทุกอย่าง)</option>
                               </select>
                            </div>
@@ -2117,6 +2118,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                        {admin.username}
                                        {admin.role === "superadmin" && (
                                           <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-sm uppercase tracking-wider">Superadmin</span>
+                                       )}
+                                       {admin.role === "staff" && (
+                                          <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-sm tracking-wider">บุคลากร</span>
                                        )}
                                     </div>
                                     <div className="text-xs text-slate-500 mt-0.5">

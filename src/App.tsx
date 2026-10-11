@@ -61,6 +61,8 @@ export default function App() {
   // Staff Access States
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [staffPasswordInput, setStaffPasswordInput] = useState("");
+  const [staffUsernameInput, setStaffUsernameInput] = useState("");
+  const [isStaffChecking, setIsStaffChecking] = useState(false);
   const [staffLoginError, setStaffLoginError] = useState("");
 
   // Restore session
@@ -266,119 +268,86 @@ export default function App() {
   }, [adminConfig.isGoogleSheetSyncEnabled, adminConfig.googleAppsScriptUrl]);
 
   // Admin Methods
+  // Checks a username/password against the local admin cache, then the Admins sheet.
+  // Returns the account (any role: superadmin, admin or staff) or null.
+  const verifyAccount = async (username: string, password: string): Promise<User | null> => {
+    const trimmedUser = username.trim();
+    if (!trimmedUser || !password) return null;
+
+    let localAdmins: (User & { password?: string })[] = [];
+    try {
+      const stored = localStorage.getItem("scitech_admin_users");
+      if (stored) localAdmins = JSON.parse(stored);
+    } catch (err) {}
+
+    // Default superadmin if not present in list
+    const defaultPassword = adminConfig.adminPassword || "admin1234";
+    if (!localAdmins.some(u => u.username.toLowerCase() === "admin")) {
+      localAdmins.unshift({ username: "admin", password: defaultPassword, role: "superadmin", pinnedLinks: [] });
+    }
+
+    const matchedLocalUser = localAdmins.find(
+      u => u.username.toLowerCase() === trimmedUser.toLowerCase() && (u.password === password || (u.username.toLowerCase() === "admin" && password === defaultPassword))
+    );
+    if (matchedLocalUser) {
+      return { username: matchedLocalUser.username, role: matchedLocalUser.role, pinnedLinks: matchedLocalUser.pinnedLinks || [] };
+    }
+
+    // Not cached here: ask the Admins sheet through Google Apps Script (3.5s timeout)
+    if (adminConfig.googleAppsScriptUrl) {
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
+      try {
+        const response = await fetch(adminConfig.googleAppsScriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'login', username: trimmedUser, password }),
+          signal: controller ? controller.signal : undefined,
+        });
+        if (timeoutId) clearTimeout(timeoutId);
+        let resData: any = null;
+        try { resData = JSON.parse(await response.text()); } catch (e) {}
+        if (resData && resData.success && resData.user) {
+          // Cache credentials locally for instant subsequent logins
+          const updated = [
+            ...localAdmins.filter(u => u.username.toLowerCase() !== trimmedUser.toLowerCase()),
+            { ...resData.user, password }
+          ];
+          localStorage.setItem("scitech_admin_users", JSON.stringify(updated));
+          return resData.user as User;
+        }
+      } catch (gasErr) {
+        if (timeoutId) clearTimeout(timeoutId);
+        console.warn("Google Apps Script login check error/timeout:", gasErr);
+      }
+    }
+    return null;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
     setIsLoggingIn(true);
-    
-    const trimmedUser = loginUsername.trim();
-    const enteredPass = loginPassword;
-
     try {
-      // 1. Immediate validation against local admin database and default superadmin
-      let localAdmins: (User & { password?: string })[] = [];
-      try {
-        const stored = localStorage.getItem("scitech_admin_users");
-        if (stored) {
-          localAdmins = JSON.parse(stored);
-        }
-      } catch (err) {}
-
-      // Default superadmin if not present in list
-      const defaultPassword = adminConfig.adminPassword || "admin1234";
-      const hasAdmin = localAdmins.some(u => u.username.toLowerCase() === "admin");
-      if (!hasAdmin) {
-        localAdmins.unshift({
-          username: "admin",
-          password: defaultPassword,
-          role: "superadmin",
-          pinnedLinks: []
-        });
-      }
-
-      // Check if credentials match any local admin
-      const matchedLocalUser = localAdmins.find(
-        u => u.username.toLowerCase() === trimmedUser.toLowerCase() && (u.password === enteredPass || (u.username.toLowerCase() === "admin" && enteredPass === defaultPassword))
-      );
-
-      if (matchedLocalUser) {
-        const userObj: User = {
-          username: matchedLocalUser.username,
-          role: matchedLocalUser.role,
-          pinnedLinks: matchedLocalUser.pinnedLinks || []
-        };
-        setIsAdmin(true);
-        setCurrentUser(userObj);
-        const credentials = { username: matchedLocalUser.username, password: enteredPass };
-        setAuthCreds(credentials);
-        
-        sessionStorage.setItem("scitech_user", JSON.stringify(userObj));
-        sessionStorage.setItem("scitech_auth_creds", JSON.stringify(credentials));
-        
-        setShowAdminModal(false);
-        setLoginUsername("");
-        setLoginPassword("");
-        setLoginError("");
-        setShowAdminPanel(true);
-        setIsLoggingIn(false);
+      const user = await verifyAccount(loginUsername, loginPassword);
+      if (!user) {
+        setLoginError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (หากเป็นครั้งแรกใช้ admin / admin1234)");
         return;
       }
-
-      // 2. If not found locally, try verifying with Google Apps Script (with a 3.5s timeout)
-      if (adminConfig.googleAppsScriptUrl) {
-        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
-
-        try {
-          const response = await fetch(adminConfig.googleAppsScriptUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'text/plain', 
-            },
-            body: JSON.stringify({
-              action: 'login',
-              username: trimmedUser,
-              password: enteredPass,
-            }),
-            signal: controller ? controller.signal : undefined,
-          });
-          if (timeoutId) clearTimeout(timeoutId);
-
-          const text = await response.text();
-          let resData: any = null;
-          try { resData = JSON.parse(text); } catch (e) {}
-
-          if (resData && resData.success && resData.user) {
-            setIsAdmin(true);
-            setCurrentUser(resData.user);
-            const credentials = { username: trimmedUser, password: enteredPass };
-            setAuthCreds(credentials);
-            
-            sessionStorage.setItem("scitech_user", JSON.stringify(resData.user));
-            sessionStorage.setItem("scitech_auth_creds", JSON.stringify(credentials));
-
-            // Cache credentials locally for instant subsequent logins
-            const updated = [
-              ...localAdmins.filter(u => u.username.toLowerCase() !== trimmedUser.toLowerCase()),
-              { ...resData.user, password: enteredPass }
-            ];
-            localStorage.setItem("scitech_admin_users", JSON.stringify(updated));
-            
-            setShowAdminModal(false);
-            setLoginUsername("");
-            setLoginPassword("");
-            setLoginError("");
-            setShowAdminPanel(true);
-            setIsLoggingIn(false);
-            return;
-          }
-        } catch (gasErr) {
-          clearTimeout(timeoutId);
-          console.warn("Google Apps Script login check error/timeout:", gasErr);
-        }
+      if (user.role === "staff") {
+        setLoginError("บัญชีนี้เป็นบัญชีบุคลากร ให้เข้าสู่ระบบที่ปุ่ม \"บุคลากร\" แทน");
+        return;
       }
-
-      setLoginError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (หากเป็นครั้งแรกใช้ admin / admin1234)");
+      const credentials = { username: user.username, password: loginPassword };
+      setIsAdmin(true);
+      setCurrentUser(user);
+      setAuthCreds(credentials);
+      sessionStorage.setItem("scitech_user", JSON.stringify(user));
+      sessionStorage.setItem("scitech_auth_creds", JSON.stringify(credentials));
+      setShowAdminModal(false);
+      setLoginUsername("");
+      setLoginPassword("");
+      setShowAdminPanel(true);
     } catch (err: any) {
       setLoginError(err.message || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
     } finally {
@@ -403,22 +372,34 @@ export default function App() {
     }
   };
 
+  // Staff get in with either their own account (made by the main admin in the back office)
+  // or a shared staff code. Either way this only unlocks staff links, never admin tools.
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const username = staffUsernameInput.trim();
     const code = staffPasswordInput.trim();
+    setStaffLoginError("");
+    setIsStaffChecking(true);
     let valid = false;
-    if (code) {
-      const hash = await hashStaffCode(code);
-      valid = (adminConfig.staffCodeHashes || []).includes(hash) || (adminConfig.staffPasswords || []).includes(code);
+    try {
+      if (username) {
+        valid = !!(await verifyAccount(username, staffPasswordInput));
+      } else if (code) {
+        const hash = await hashStaffCode(code);
+        valid = (adminConfig.staffCodeHashes || []).includes(hash) || (adminConfig.staffPasswords || []).includes(code);
+      }
+    } finally {
+      setIsStaffChecking(false);
     }
     if (valid) {
       sessionStorage.setItem("scitech_staff_session", "true");
       setShowStaffModal(false);
       setStaffPasswordInput("");
+      setStaffUsernameInput("");
       setStaffLoginError("");
       setViewMode("staff");
     } else {
-      setStaffLoginError("รหัสไม่ถูกต้อง ขอรหัสจากแอดมินของคณะ");
+      setStaffLoginError(username ? "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" : "รหัสไม่ถูกต้อง ขอรหัสจากแอดมินของคณะ");
     }
   };
 
@@ -1115,17 +1096,30 @@ export default function App() {
                 <ShieldAlert className="w-6 h-6 text-rose-500" />
               </div>
               <h3 className="text-xl font-bold text-slate-800 text-center">เข้าใช้งานหมวดหมู่บุคลากร</h3>
-              <p className="text-xs text-slate-500 text-center mt-2 px-4">กรุณากรอกรหัสผ่านเพื่อเข้าใช้งานลิงก์สำหรับบุคลากร</p>
+              <p className="text-xs text-slate-500 text-center mt-2 px-4">ใช้บัญชีบุคลากรที่ได้รับจากแอดมิน หรือเว้นชื่อผู้ใช้ว่างแล้วใส่รหัสบุคลากร</p>
             </div>
-            <form onSubmit={handleStaffLogin} className="space-y-4">
+            <form onSubmit={handleStaffLogin} className="space-y-3">
               <div>
+                <label htmlFor="staff-username" className="text-xs font-semibold text-slate-600 block mb-1">ชื่อผู้ใช้ <span className="font-normal text-slate-500">(ไม่ต้องกรอกถ้าใช้รหัสบุคลากร)</span></label>
                 <input
-                  type="password"
-                  placeholder="รหัสผ่าน"
+                  id="staff-username"
+                  type="text"
+                  autoComplete="username"
                   autoFocus
+                  value={staffUsernameInput}
+                  onChange={(e) => setStaffUsernameInput(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm bg-slate-50 focus:bg-white transition-all"
+                />
+              </div>
+              <div>
+                <label htmlFor="staff-password" className="text-xs font-semibold text-slate-600 block mb-1">รหัสผ่าน / รหัสบุคลากร</label>
+                <input
+                  id="staff-password"
+                  type="password"
+                  autoComplete="current-password"
                   value={staffPasswordInput}
                   onChange={(e) => setStaffPasswordInput(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm bg-slate-50 focus:bg-white transition-all text-center tracking-widest font-mono"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm bg-slate-50 focus:bg-white transition-all font-mono"
                 />
               </div>
               {staffLoginError && (
@@ -1141,9 +1135,10 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white shadow-sm text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  disabled={isStaffChecking}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white shadow-sm text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-60"
                 >
-                  ยืนยัน
+                  {isStaffChecking ? "กำลังตรวจสอบ..." : "เข้าสู่ระบบ"}
                 </button>
               </div>
             </form>

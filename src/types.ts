@@ -12,7 +12,7 @@ export interface Link {
 
 export interface User {
   username: string;
-  role: 'superadmin' | 'admin';
+  role: 'superadmin' | 'admin' | 'staff';
   pinnedLinks: string[];
 }
 
