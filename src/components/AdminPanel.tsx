@@ -10,6 +10,9 @@ import { AVAILABLE_ICONS, DynamicIcon } from "./DynamicIcon";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { addAdminViaWebApp, deleteAdminViaWebApp } from "../googleSheets";
 
+// Google Sheets cells hold up to 50,000 characters; keep pasted pictures safely below that.
+const SHEET_CELL_LIMIT = 45000;
+
 interface AdminPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -471,25 +474,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             return;
           }
 
-          // Target size: 640 x 400 (perfect 16:10 aspect ratio matching link card layout)
-          const targetWidth = 640;
-          const targetHeight = 400;
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
+          // A Google Sheets cell holds at most 50,000 characters, and a picture that does not fit
+          // makes the whole save fail (it then vanishes on the next sync). Shrink until it fits.
+          const attempts: [number, number, number][] = [
+            [640, 400, 0.72], [560, 350, 0.65], [480, 300, 0.6], [400, 250, 0.55], [320, 200, 0.5], [256, 160, 0.45],
+          ];
+          let dataUrl = "";
+          for (const [targetWidth, targetHeight, quality] of attempts) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
 
-          // Crop and scale "cover" calculations
-          const scale = Math.max(targetWidth / img.width, targetHeight / img.height);
-          const x = (targetWidth / 2) - (img.width / 2) * scale;
-          const y = (targetHeight / 2) - (img.height / 2) * scale;
-          const width = img.width * scale;
-          const height = img.height * scale;
+            // Crop and scale "cover" calculations (16:10, matching the link card)
+            const scale = Math.max(targetWidth / img.width, targetHeight / img.height);
+            const x = (targetWidth / 2) - (img.width / 2) * scale;
+            const y = (targetHeight / 2) - (img.height / 2) * scale;
 
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = "high";
-          ctx.drawImage(img, x, y, width, height);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
 
-          // Convert to jpeg to save space in Firestore (0.75 quality is lightweight and crisp)
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+            dataUrl = canvas.toDataURL("image/jpeg", quality);
+            if (dataUrl.length <= SHEET_CELL_LIMIT) break;
+          }
           resolve(dataUrl);
         };
         img.onerror = () => reject(new Error("Failed to load image"));
@@ -859,10 +867,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             }
           }
           
-          canvas.width = width;
-          canvas.height = height;
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL("image/png");
+          // Shrink the logo until it fits in one sheet cell (see SHEET_CELL_LIMIT)
+          let dataUrl = "";
+          for (let shrink = 1; shrink >= 0.25; shrink /= 1.5) {
+            canvas.width = Math.max(1, Math.round(width * shrink));
+            canvas.height = Math.max(1, Math.round(height * shrink));
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            dataUrl = canvas.toDataURL("image/png");
+            if (dataUrl.length <= SHEET_CELL_LIMIT) break;
+            dataUrl = canvas.toDataURL("image/webp", 0.8);
+            if (dataUrl.length <= SHEET_CELL_LIMIT) break;
+          }
           setSiteLogoUrl(dataUrl);
           setIsSubmitting(false);
         };
