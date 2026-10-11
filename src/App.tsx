@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, AdminConfig, User, AuthCredentials } from "./types";
 import { DEFAULT_LINKS } from "./data/seed";
-import { LinkCard } from "./components/LinkCard";
-import { LogoCelestialDust } from "./components/LogoCelestialDust";
+import { BentoCard, BentoVariant, SiteIcon } from "./components/BentoCard";
 
 // Lazy-load heavy AdminPanel for faster initial bundle and instant page render
 const AdminPanel = React.lazy(() =>
@@ -28,7 +27,8 @@ import {
   AlignJustify,
   ChevronDown,
   Check,
-  ArrowUp
+  ArrowUp,
+  Pin
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { sendActionToWebApp, getLastWriteAt, WRITE_SETTLE_MS, DEFAULT_GAS_URL } from "./googleSheets";
@@ -651,333 +651,240 @@ export default function App() {
     });
   }, [links, searchQuery, viewMode]);
 
-  return (
-    <div className="min-h-screen bg-[#F8F9FA] text-slate-800 flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] relative overflow-x-clip">
-      
-      {/* Background Ambient Orbs (Mac Aesthetic) */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 transform-gpu will-change-transform">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#5c0620]/25 blur-[90px] mix-blend-multiply transform-gpu" />
-        <div className="absolute top-[10%] right-[-10%] w-[50%] h-[70%] rounded-full bg-[#9f1239]/18 blur-[100px] mix-blend-multiply transform-gpu" />
-        <div className="absolute bottom-[-10%] left-[10%] w-[60%] h-[60%] rounded-full bg-[#4a044e]/18 blur-[100px] mix-blend-multiply transform-gpu" />
-        <div className="absolute top-[40%] left-[30%] w-[40%] h-[40%] rounded-full bg-[#fb7185]/12 blur-[80px] mix-blend-multiply transform-gpu" />
-        
-        {/* Subtle Grid overlay for technical feel */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8882_1px,transparent_1px),linear-gradient(to_bottom,#8882_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] opacity-30" />
-      </div>
+  // Personal pins: kept in this browser only, so every visitor has their own list.
+  const [myPins, setMyPins] = useState<string[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("scitech_my_pins") || "[]");
+      return Array.isArray(saved) ? saved.map(String) : [];
+    } catch {
+      return [];
+    }
+  });
 
-      {/* 1. TOP HEADER BANNER - Mac Glassmorphism Theme */}
+  const toggleMyPin = useCallback((id: string) => {
+    setMyPins(prev => {
+      const next = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
+      try {
+        localStorage.setItem("scitech_my_pins", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const myPinnedLinks = useMemo(
+    () => myPins
+      .map(id => links.find(l => l.id === id))
+      .filter((l): l is Link => !!l && (viewMode === "staff" || !l.isStaffOnly)),
+    [myPins, links, viewMode]
+  );
+
+  const staffLinkCount = useMemo(() => links.filter(l => l.isStaffOnly).length, [links]);
+
+  // Bento order: faculty pins first, then most clicked. Two feature tiles, one wide tile, the rest small.
+  const bentoItems = useMemo(() => {
+    if (searchQuery) {
+      return filteredLinks.map(link => ({ link, variant: "small" as BentoVariant, rank: undefined as number | undefined }));
+    }
+    const ranked = [...filteredLinks].sort((a, b) =>
+      (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || (b.clickCount || 0) - (a.clickCount || 0)
+    );
+    return ranked.map((link, i) => ({
+      link,
+      variant: (i < 2 ? "feature" : i === 2 ? "wide" : "small") as BentoVariant,
+      rank: i < 2 && !link.isPinned ? i + 1 : undefined,
+    }));
+  }, [filteredLinks, searchQuery]);
+
+  return (
+    <div className="min-h-screen bg-[#f3f0ef] text-[#1f1a1c] flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] relative overflow-x-clip">
+
       {adminConfig.isAnnouncementActive && adminConfig.announcementText && (
-        <div className="relative z-20 bg-rose-600 text-white px-4 py-2 text-center text-sm font-medium shadow-md">
+        <div className="relative z-20 bg-[#3a0210] text-white px-4 py-2.5 text-center text-sm font-medium">
           {adminConfig.announcementText}
         </div>
       )}
-      <header className="relative z-10 pt-6 md:pt-10 pb-8 md:pb-12 px-4 md:px-8 border-b border-white/40 bg-white/40 backdrop-blur-2xl shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
-        <div className="max-w-7xl mx-auto relative z-10">
-          
-          {/* Top Row: Admin Indicator */}
-          <div className="flex justify-end mb-6">
-            {isAdmin ? (
-              <div className="hidden sm:flex items-center gap-2 bg-white/60 border border-white/80 shadow-sm p-1 rounded-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
-                <button
-                  onClick={() => setShowAdminPanel(true)}
-                  className="text-xs bg-white text-[#5c0620] font-bold px-3.5 py-1.5 rounded-xl hover:bg-rose-50 transition-all flex items-center gap-1 cursor-pointer shadow-sm"
-                >
-                  <Settings className="w-3.5 h-3.5 text-[#5c0620]" />
-                  <span>จัดการข้อมูล</span>
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="p-1.5 rounded-xl text-slate-500 hover:text-[#5c0620] hover:bg-white transition-colors cursor-pointer"
-                  title="ออกจากระบบแอดมิน"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
+
+      <main className="max-w-6xl mx-auto w-full px-4 md:px-6 pt-4 md:pt-7 pb-10 flex-1 flex flex-col gap-3 md:gap-4 relative z-10">
+
+        {/* Top bar: brand, audience switch, admin */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5 font-bold text-[16px] md:text-[17px]">
+            {adminConfig.siteLogoUrl ? (
+              <img src={adminConfig.siteLogoUrl} alt="" className="w-9 h-9 rounded-full object-contain bg-white" />
             ) : (
-              <button
-                onClick={() => setShowAdminModal(true)}
-                className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 bg-white/50 hover:bg-white/80 px-4 py-2 rounded-2xl transition-all border border-white/60 shadow-sm cursor-pointer"
-              >
-                <Settings className="w-3.5 h-3.5 text-slate-400" />
-                <span>สำหรับผู้ดูแลระบบ (Admin)</span>
-              </button>
-            )}
-          </div>
-
-          {/* Main Title & Brand */}
-          <div className="mb-8 md:mb-10 text-center flex flex-col items-center">
-            
-            {/* Animated Logo Display (Technology / Cyber HUD Style) */}
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.8, type: "spring", bounce: 0.5 }}
-              className="relative mb-8 md:mb-10 group flex items-center justify-center w-32 h-32 md:w-40 md:h-40"
-            >
-              {/* Starlike Celestial Dust Particles (Clustered neatly behind logo, scatters on scroll down, gathers back on scroll up) */}
-              <LogoCelestialDust />
-
-              {/* Tech HUD Ring 1 (Outer Dashed) */}
-              <motion.div 
-                className="absolute inset-0 -m-3 rounded-full border-2 border-dashed border-[#5c0620]/30 opacity-70"
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
-              />
-              
-              {/* Tech HUD Ring 2 (Middle Dotted) */}
-              <motion.div 
-                className="absolute inset-0 m-0.5 rounded-full border-[3px] border-dotted border-rose-500/40"
-                animate={{ rotate: -360 }}
-                transition={{ repeat: Infinity, duration: 18, ease: "linear" }}
-              />
-
-              {/* Tech HUD Ring 3 (Inner Tech glow) */}
-              <motion.div 
-                className="absolute inset-2 rounded-full border border-[#5c0620]/20 shadow-[0_0_25px_rgba(92,6,32,0.15)] bg-white/60 backdrop-blur-md"
-                animate={{ scale: [1, 1.03, 1], opacity: [0.8, 1, 0.8] }}
-                transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-              />
-
-              {/* Scanner line overlay */}
-              <motion.div
-                className="absolute inset-0 overflow-hidden rounded-full z-20 pointer-events-none opacity-40 mix-blend-overlay"
-              >
-                 <motion.div 
-                   className="w-full h-1.5 bg-gradient-to-r from-transparent via-[#5c0620] to-transparent shadow-[0_0_8px_#5c0620]"
-                   animate={{ y: [-150, 150] }}
-                   transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-                 />
-              </motion.div>
-
-              {/* Logo Image or Brand Emblem */}
-              {adminConfig.siteLogoUrl ? (
-                <motion.img 
-                  src={adminConfig.siteLogoUrl} 
-                  alt="Site Logo" 
-                  className="w-24 h-24 md:w-32 md:h-32 object-contain relative z-10 drop-shadow-[0_0_12px_rgba(92,6,32,0.4)] p-1.5"
-                  whileHover={{ scale: 1.08, rotate: 2 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                />
-              ) : (
-                <motion.div 
-                  className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center relative z-10 drop-shadow-[0_0_12px_rgba(92,6,32,0.4)] p-1.5"
-                  whileHover={{ scale: 1.08, rotate: 2 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <GraduationCap className="w-16 h-16 md:w-20 md:h-20 text-[#5c0620]" />
-                </motion.div>
-              )}
-            </motion.div>
-
-            <div className="space-y-3 md:space-y-4 flex flex-col items-center">
-              <div className="flex items-center gap-2 flex-wrap justify-center">
-                <span className="px-3.5 py-1 text-[10px] md:text-[11px] font-extrabold tracking-wider uppercase text-[#5c0620] bg-white/80 backdrop-blur-sm rounded-full border border-[#5c0620]/20 shadow-sm">
-                  FACULTY OF SCIENCE AND TECHNOLOGY
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#3a0210] via-[#5c0620] to-[#881337] leading-tight pb-1">
-                ระบบพอร์ทัลลิงก์สำคัญ
-              </h1>
-              <p className="text-sm md:text-base text-slate-600 max-w-2xl font-light leading-relaxed">
-                ศูนย์รวมลิงก์บริการและระบบงานสำคัญของคณะวิทยาศาสตร์และเทคโนโลยี ไว้ในหน้าเดียว
-              </p>
-            </div>
-          </div>
-
-          {/* Floating Search Bar */}
-          <div className="max-w-2xl mx-auto relative group">
-            <div className="absolute inset-y-0 left-0 pl-4.5 flex items-center pointer-events-none text-slate-400">
-              <Search className="w-5 h-5 text-slate-400 group-focus-within:text-[#5c0620] transition-colors" />
-            </div>
-            <input
-              type="text"
-              placeholder="ค้นหาระบบ, ลิงก์ หรือบริการ..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-10 py-4 bg-white/80 backdrop-blur-md text-slate-800 placeholder-slate-400 rounded-2xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] focus:outline-hidden focus:ring-4 focus:ring-[#5c0620]/20 focus:border-[#5c0620]/40 focus:bg-white text-sm transition-all font-sans"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-
-        </div>
-      </header>
-
-      {/* 2. MAIN APP CONTAINER - Streamlined Full Width Layout */}
-      <main className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-10 flex-1 w-full space-y-6 md:space-y-8 relative z-10">
-        
-        {/* LINKS GRID HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 md:pb-4 border-b border-slate-200/50">
-          <div className="flex flex-col gap-2">
-            <h3 className="font-extrabold text-slate-800 text-lg md:text-xl tracking-tight">
-              ลิงก์ระบบงานและบริการสำคัญของคณะฯ
-            </h3>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#5c0620] bg-white/60 backdrop-blur-md border border-white px-3 py-1 rounded-full shadow-sm">
-                ทั้งหมด {filteredLinks.length} รายการ
+              <span className="w-9 h-9 rounded-full bg-[#5c0620] flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-white" aria-hidden="true" />
               </span>
+            )}
+            <span>{adminConfig.siteTitle || "FST Link Hub"}</span>
+          </div>
+
+          <div className="flex items-center gap-2 order-3 w-full sm:order-none sm:w-auto">
+            <div role="group" aria-label="กลุ่มผู้ใช้" className="grid grid-cols-2 gap-1 bg-white rounded-full p-1 w-full sm:w-auto">
+              <button
+                type="button"
+                aria-pressed={viewMode === "student"}
+                onClick={() => setViewMode("student")}
+                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer ${viewMode === "student" ? "bg-[#1f1a1c] text-white" : "text-[#4a4245] hover:bg-[#f3f0ef]"}`}
+              >
+                นักศึกษา
+              </button>
+              <button
+                type="button"
+                aria-pressed={viewMode === "staff"}
+                onClick={handleStaffTabClick}
+                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "staff" ? "bg-[#1f1a1c] text-white" : "text-[#4a4245] hover:bg-[#f3f0ef]"}`}
+              >
+                {viewMode !== "staff" && <Lock className="w-3.5 h-3.5" aria-hidden="true" />}
+                บุคลากร
+              </button>
             </div>
           </div>
-          
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start w-full sm:w-auto">
-            <div className="flex items-center gap-1 bg-white/70 backdrop-blur-md p-1 rounded-full shadow-sm border border-white/80 flex-1 sm:flex-none">
-              <button
-                onClick={() => setViewMode("student")}
-                className={`flex-1 sm:flex-none px-3 py-2 sm:px-5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
-                  viewMode === "student" 
-                    ? "bg-[#5c0620] text-white shadow-md shadow-[#5c0620]/20" 
-                    : "text-slate-600 hover:bg-white hover:text-slate-900"
-                }`}
-              >
-                <GraduationCap className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${viewMode === "student" ? "text-white" : "text-slate-400"}`} />
-                สำหรับนักศึกษา
+
+          {isAdmin ? (
+            <div className="flex items-center gap-1 bg-white rounded-full p-1">
+              <button type="button" onClick={() => setShowAdminPanel(true)} className="flex items-center gap-1.5 px-4 min-h-10 rounded-full text-sm font-semibold text-[#5c0620] hover:bg-[#f3f0ef] cursor-pointer">
+                <Settings className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">จัดการข้อมูล</span>
               </button>
-              <button
-                onClick={handleStaffTabClick}
-                className={`flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 group ${
-                  viewMode === "staff" 
-                    ? "bg-slate-800 text-white shadow-md" 
-                    : "text-slate-500 hover:bg-rose-50 hover:text-rose-700"
-                }`}
-                title="สำหรับเจ้าหน้าที่/บุคลากร"
-              >
-                <ShieldAlert className={`w-3 h-3 sm:w-3.5 sm:h-3.5 transition-colors ${viewMode === "staff" ? "text-rose-300" : "text-slate-400 group-hover:text-rose-500"}`} />
-                <span>สำหรับบุคลากร</span>
+              <button type="button" onClick={handleLogout} aria-label="ออกจากระบบแอดมิน" title="ออกจากระบบแอดมิน" className="w-10 h-10 rounded-full flex items-center justify-center text-[#4a4245] hover:bg-[#f3f0ef] cursor-pointer">
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
+          ) : (
+            <button type="button" onClick={() => setShowAdminModal(true)} aria-label="เข้าสู่ระบบผู้ดูแล" title="เข้าสู่ระบบผู้ดูแล" className="w-11 h-11 rounded-full bg-white flex items-center justify-center text-[#1f1a1c] hover:text-[#5c0620] cursor-pointer">
+              <Settings className="w-5 h-5" />
+            </button>
+          )}
+        </div>
 
-            {/* View Layout Selector */}
-            <div className="relative self-end sm:self-auto">
-              <button
-                onClick={() => setShowViewMenu(!showViewMenu)}
-                className="flex items-center gap-1.5 bg-white/80 hover:bg-white text-slate-700 px-3 py-2 rounded-xl border border-slate-200/60 shadow-sm text-sm font-medium transition-all cursor-pointer"
-                title="มุมมอง"
-              >
-                {layoutMode === "grid" && <LayoutGrid className="w-4 h-4" />}
-                {layoutMode === "list" && <ListIcon className="w-4 h-4" />}
-                {layoutMode === "compact" && <AlignJustify className="w-4 h-4" />}
-                <span className="hidden sm:inline">มุมมอง</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
-              
-              {showViewMenu && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setShowViewMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1.5 w-[200px] bg-white/95 backdrop-blur-xl rounded-xl border border-slate-100 shadow-xl z-40 p-1.5 flex flex-col animate-in fade-in zoom-in-95 duration-200">
-                    <button
-                      onClick={() => { setLayoutMode("grid"); setShowViewMenu(false); }}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${layoutMode === "grid" ? "bg-slate-50 text-[#5c0620]" : "text-slate-600 hover:bg-slate-50"}`}
-                    >
-                      <LayoutGrid className="w-4 h-4 text-slate-400" />
-                      <span>ไอคอนขนาดใหญ่ (Grid)</span>
-                      {layoutMode === "grid" && <Check className="w-3.5 h-3.5 ml-auto text-[#5c0620]" />}
-                    </button>
-                    <button
-                      onClick={() => { setLayoutMode("list"); setShowViewMenu(false); }}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${layoutMode === "list" ? "bg-slate-50 text-[#5c0620]" : "text-slate-600 hover:bg-slate-50"}`}
-                    >
-                      <ListIcon className="w-4 h-4 text-slate-400" />
-                      <span>รายการละเอียด (List)</span>
-                      {layoutMode === "list" && <Check className="w-3.5 h-3.5 ml-auto text-[#5c0620]" />}
-                    </button>
-                    <button
-                      onClick={() => { setLayoutMode("compact"); setShowViewMenu(false); }}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${layoutMode === "compact" ? "bg-slate-50 text-[#5c0620]" : "text-slate-600 hover:bg-slate-50"}`}
-                    >
-                      <AlignJustify className="w-4 h-4 text-slate-400" />
-                      <span>กะทัดรัด (Compact)</span>
-                      {layoutMode === "compact" && <Check className="w-3.5 h-3.5 ml-auto text-[#5c0620]" />}
-                    </button>
-                  </div>
-                </>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 grid-flow-dense">
+
+          {/* Hero: greeting + search */}
+          <div className="col-span-2 bg-[#5c0620] text-white rounded-[24px] md:rounded-[28px] p-5 md:p-8 flex flex-col justify-between gap-5 md:gap-7 min-h-[200px] md:min-h-[260px]">
+            <div>
+              <div className="text-[13px] md:text-[14px] text-[#f6d9e0]">คณะวิทยาศาสตร์และเทคโนโลยี</div>
+              <h1 className="mt-1 text-[26px] md:text-[38px] leading-tight font-bold">วันนี้ต้องใช้ระบบไหน?</h1>
+            </div>
+            <div className="relative">
+              <label htmlFor="link-search" className="sr-only">ค้นหาลิงก์</label>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5c0620] pointer-events-none" aria-hidden="true" />
+              <input
+                id="link-search"
+                type="search"
+                placeholder="พิมพ์ชื่อระบบ เช่น เกรด, คำร้อง, Wi‑Fi"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-12 min-h-[52px] md:min-h-14 bg-white text-[#1f1a1c] placeholder-[#7a7074] rounded-2xl text-[16px] focus:outline-none focus:ring-4 focus:ring-white/40"
+              />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery("")} aria-label="ล้างคำค้นหา" className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#5e5558] hover:text-[#1f1a1c] cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Quick Helper info */}
-        {searchQuery && (
-          <div className="text-xs text-slate-500 bg-white/50 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/60 shadow-sm self-start inline-block">
-            ผลลัพธ์การค้นหาคำว่า <strong className="text-[#5c0620] font-bold">"{searchQuery}"</strong>
-          </div>
-        )}
-
-        {/* LOADING STATE */}
-        {loading ? (
-          <div className="py-24 text-center space-y-4 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-            <Loader2 className="w-10 h-10 animate-spin text-[#5c0620] mx-auto" />
-            <p className="text-sm text-slate-500 font-medium font-sans">กำลังโหลดข้อมูลพอร์ทัลลิงก์...</p>
-          </div>
-        ) : (
-          <>
-            {/* LINKS CONTAINER */}
-            {filteredLinks.length === 0 ? (
-              <div className="py-20 text-center bg-white/60 backdrop-blur-xl rounded-3xl border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-4">
-                <Globe className="w-12 h-12 text-slate-300 mx-auto" />
-                <div className="space-y-1">
-                  <h4 className="font-bold text-slate-700 text-lg">ไม่พบลิงก์ในระบบที่ตรงกับการค้นหา</h4>
-                  <p className="text-sm text-slate-500 max-w-md mx-auto">
-                    กรุณาลองเปลี่ยนคำค้นหาเพื่อตรวจดูใหม่อีกครั้ง
-                  </p>
-                </div>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="text-xs bg-white text-[#5c0620] hover:text-[#3a0210] hover:bg-slate-50 font-bold px-5 py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm border border-slate-100"
-                  >
-                    ล้างตัวกรองทั้งหมด
-                  </button>
-                )}
-              </div>
+          {/* My pins: saved per browser, so each visitor has their own */}
+          <section aria-labelledby="my-pins-title" className="col-span-2 bg-white rounded-[24px] md:rounded-[28px] p-4 md:p-6 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="my-pins-title" className="text-[15px] md:text-[16px] font-bold flex items-center gap-2">
+                <Pin className="w-4 h-4 text-[#5c0620]" aria-hidden="true" />
+                หมุดของฉัน
+              </h2>
+              {myPinnedLinks.length > 0 && <span className="text-[13px] text-[#5e5558]">{myPinnedLinks.length} รายการ</span>}
+            </div>
+            {myPinnedLinks.length === 0 ? (
+              <p className="text-[14px] text-[#5e5558] leading-relaxed">
+                กดปุ่ม <Pin className="inline w-4 h-4 align-[-2px] text-[#5c0620]" aria-label="หมุด" /> บนการ์ดเว็บที่ใช้บ่อย แล้วเว็บนั้นจะมาอยู่ตรงนี้ หมุดเก็บไว้ในเครื่องของคุณเอง คนอื่นไม่เห็น
+              </p>
             ) : (
-              <div className={
-                layoutMode === "grid" ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-6" :
-                layoutMode === "list" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5" :
-                "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3"
-              }>
-                <AnimatePresence>
-                  {filteredLinks.map((link, index) => {
-                    return (
-                      <motion.div 
-                        key={link.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, margin: "100px" }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="link-card-contain"
-                      >
-                        <LinkCard
-                          link={link}
-                          isAdmin={isAdmin}
-                          layoutMode={layoutMode}
-                          isPersonalPin={isAdmin && (currentUser?.pinnedLinks || []).includes(link.id)}
-                          onIncrementClick={handleIncrementClick}
-                          onEdit={(l) => {
-                            setShowAdminPanel(true);
-                          }}
-                          onDelete={(id) => {
-                            handleDeleteLink(id);
-                          }}
-                        />
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {myPinnedLinks.map((link) => (
+                  <li key={link.id} className="relative flex items-center gap-3 rounded-2xl bg-[#f3f0ef] pl-2 pr-1 py-1.5 hover:bg-[#ebe6e4] transition-colors">
+                    {link.thumbnailUrl ? (
+                      <img src={link.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                    ) : (
+                      <SiteIcon link={link} index={links.indexOf(link)} size={40} radius={12} />
+                    )}
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => handleIncrementClick(link.id)}
+                      className="flex-1 min-w-0 text-[14px] font-semibold text-[#1f1a1c] truncate after:absolute after:inset-0 after:content-['']"
+                    >
+                      {link.title}
+                    </a>
+                    <button type="button" onClick={() => toggleMyPin(link.id)} aria-label={`เอา ${link.title} ออกจากหมุดของฉัน`} title="เอาออก" className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-[#5e5558] hover:text-[#5c0620] hover:bg-white cursor-pointer shrink-0">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </>
-        )}
+          </section>
 
+          {searchQuery && (
+            <p className="col-span-2 lg:col-span-4 text-[14px] text-[#4a4245] px-1 pt-2" aria-live="polite">
+              ผลการค้นหา “<strong className="text-[#5c0620]">{searchQuery}</strong>” {filteredLinks.length} รายการ
+            </p>
+          )}
+
+          {loading ? (
+            <div className="col-span-2 lg:col-span-4 py-20 text-center bg-white rounded-[28px]">
+              <Loader2 className="w-9 h-9 animate-spin text-[#5c0620] mx-auto" />
+              <p className="mt-3 text-sm text-[#5e5558]">กำลังโหลดลิงก์...</p>
+            </div>
+          ) : filteredLinks.length === 0 ? (
+            <div className="col-span-2 lg:col-span-4 py-16 px-6 text-center bg-white rounded-[28px] space-y-3">
+              <Globe className="w-11 h-11 text-[#c9c1c4] mx-auto" aria-hidden="true" />
+              <h2 className="font-bold text-[17px]">ไม่พบลิงก์ที่ตรงกับคำค้นหา</h2>
+              <p className="text-[14px] text-[#5e5558]">ลองใช้คำอื่น หรือดูลิงก์ทั้งหมด</p>
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery("")} className="text-sm font-semibold bg-[#1f1a1c] text-white px-5 min-h-11 rounded-full cursor-pointer">
+                  ดูลิงก์ทั้งหมด
+                </button>
+              )}
+            </div>
+          ) : (
+            bentoItems.map(({ link, variant, rank }) => (
+              <BentoCard
+                key={link.id}
+                link={link}
+                variant={variant}
+                rank={rank}
+                index={links.indexOf(link)}
+                isMyPin={myPins.includes(link.id)}
+                isAdmin={isAdmin}
+                onTogglePin={toggleMyPin}
+                onIncrementClick={handleIncrementClick}
+                onEdit={() => setShowAdminPanel(true)}
+                onDelete={handleDeleteLink}
+              />
+            ))
+          )}
+
+          {/* Locked staff systems teaser */}
+          {!loading && viewMode === "student" && staffLinkCount > 0 && !searchQuery && (
+            <div className="col-span-2 bg-[#e4dfdd] rounded-[22px] sm:rounded-[26px] p-4 flex items-center gap-3.5 min-h-[96px]">
+              <span className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5" aria-hidden="true" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[15px] font-semibold">ระบบบุคลากร</span>
+                <span className="block text-[13px] text-[#4a4245]">{staffLinkCount} รายการ</span>
+              </span>
+              <button type="button" onClick={handleStaffTabClick} className="text-[14px] font-semibold bg-[#1f1a1c] text-white px-4 min-h-11 rounded-xl cursor-pointer shrink-0">
+                ปลดล็อก
+              </button>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* 3. APP FOOTER */}
-      <footer className="bg-white/40 backdrop-blur-2xl text-slate-600 mt-10 md:mt-20 border-t border-white/60 shadow-[0_-4px_30px_rgba(0,0,0,0.02)] relative z-10">
+      <footer className="bg-white text-slate-600 mt-6 md:mt-10 border-t border-[#e4dfdd] relative z-10">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           
           {/* Col 1: About Faculty */}
