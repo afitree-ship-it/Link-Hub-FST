@@ -39,8 +39,10 @@ export const getHost = (url: string) => {
 /** Site icon: the link's own picture is shown elsewhere; this is the small square badge. */
 export const SiteIcon: React.FC<{ link: Link; index: number; size: number; radius: number }> = ({ link, index, size, radius }) => {
   const [failed, setFailed] = useState(false);
-  const host = getHost(link.url);
-  const color = TILE_COLORS[index % TILE_COLORS.length];
+  const host = getHost(link?.url || "");
+  const colorIndex = Math.abs(typeof index === "number" ? index : 0) % TILE_COLORS.length;
+  const color = TILE_COLORS[colorIndex] || TILE_COLORS[0];
+  const safeTitle = typeof link?.title === "string" ? link.title : String(link?.title || "");
   return (
     <span
       className="flex items-center justify-center shrink-0 overflow-hidden font-bold"
@@ -57,7 +59,7 @@ export const SiteIcon: React.FC<{ link: Link; index: number; size: number; radiu
           style={{ width: size * 0.55, height: size * 0.55 }}
         />
       ) : (
-        ((link.title || "").match(/[A-Za-z0-9ก-ฮ]/) || ["?"])[0].toUpperCase()
+        (safeTitle.match(/[A-Za-z0-9ก-ฮ]/) || ["?"])[0].toUpperCase()
       )}
     </span>
   );
@@ -208,7 +210,8 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
     );
   }
 
-  const tile = TILE_COLORS[index % TILE_COLORS.length];
+  const tileIndex = Math.abs(typeof index === "number" ? index : 0) % TILE_COLORS.length;
+  const tile = TILE_COLORS[tileIndex] || TILE_COLORS[0];
 
   if (variant === "wide") {
     return (

@@ -110,7 +110,13 @@ export const normalizeLink = (raw: any): Link => {
   }
 
   return {
-    id: String(raw.id || raw[0] || crypto.randomUUID()),
+    id: String(
+      raw.id ||
+      raw[0] ||
+      (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `link-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`)
+    ),
     title: String(raw.title || raw[1] || ''),
     url: String(raw.url || raw[2] || ''),
     description: String(raw.description !== undefined ? raw.description : (raw[3] || '')),

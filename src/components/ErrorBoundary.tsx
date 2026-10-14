@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { AlertCircle, RotateCcw } from "lucide-react";
+import { AlertCircle, RotateCcw, Trash2 } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -24,10 +24,22 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.warn("Caught by ErrorBoundary:", error, errorInfo);
+    console.error("Caught by ErrorBoundary:", error, errorInfo);
   }
 
   private handleReset = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  private handleClearStorageAndReset = () => {
+    try {
+      localStorage.removeItem("scitech_links");
+      localStorage.removeItem("scitech_admin_config");
+      localStorage.removeItem("scitech_lang");
+      localStorage.removeItem("scitech_translations_cache_v1");
+      sessionStorage.clear();
+    } catch {}
     this.setState({ hasError: false, error: null });
     window.location.reload();
   };
@@ -41,16 +53,36 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <AlertCircle className="w-6 h-6" />
             </div>
             <h2 className="text-xl font-bold mb-2">เกิดข้อผิดพลาดในการโหลดหน้าเว็บ</h2>
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-slate-500 mb-4">
               ระบบตรวจพบข้อผิดพลาดที่ไม่คาดคิด กรุณารีเฟรชหน้าเว็บหรือคลิกปุ่มด้านล่างเพื่อเริ่มใหม่อีกครั้ง
             </p>
-            <button
-              onClick={this.handleReset}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#5c0620] hover:bg-[#4a051a] text-white font-medium text-sm rounded-xl transition-colors shadow-sm"
-            >
-              <RotateCcw className="w-4 h-4" />
-              โหลดหน้าเว็บใหม่ (Reload)
-            </button>
+            {this.state.error && (
+              <details className="mb-6 text-left">
+                <summary className="text-xs text-rose-600 cursor-pointer font-medium hover:underline">
+                  ดูรายละเอียดข้อผิดพลาด (Technical details)
+                </summary>
+                <pre className="mt-2 text-[11px] bg-rose-50 border border-rose-200 text-rose-800 p-2.5 rounded-xl overflow-x-auto max-h-36 whitespace-pre-wrap break-all">
+                  {this.state.error.message || String(this.state.error)}
+                </pre>
+              </details>
+            )}
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <button
+                onClick={this.handleReset}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#5c0620] hover:bg-[#4a051a] text-white font-medium text-sm rounded-xl transition-colors shadow-sm cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                โหลดหน้าเว็บใหม่ (Reload)
+              </button>
+              <button
+                onClick={this.handleClearStorageAndReset}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-xl transition-colors cursor-pointer"
+                title="ล้างแคชในเครื่องแล้วเริ่มใหม่"
+              >
+                <Trash2 className="w-4 h-4 text-slate-500" />
+                ล้างแคชและเริ่มใหม่
+              </button>
+            </div>
           </div>
         </div>
       );

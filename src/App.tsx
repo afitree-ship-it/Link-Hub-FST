@@ -71,7 +71,7 @@ export default function App() {
   const [translatedLinksMap, setTranslatedLinksMap] = useState<Record<string, { title: string; description?: string }>>({});
 
   useEffect(() => {
-    if (lang !== "en" || links.length === 0) return;
+    if (lang !== "en" || !links || links.length === 0) return;
     let isCancelled = false;
 
     const translateLinks = async () => {
@@ -80,34 +80,38 @@ export default function App() {
 
       for (const link of links) {
         if (isCancelled) break;
+        if (!link || !link.id) continue;
         if (translatedLinksMap[link.id]) continue;
 
-        // Check curated glossary first
-        const glossaryTitle = ACADEMIC_GLOSSARY[link.title.trim()];
-        const glossaryDesc = link.description ? ACADEMIC_GLOSSARY[link.description.trim()] : undefined;
+        const titleText = typeof link.title === "string" ? link.title.trim() : String(link.title || "").trim();
+        const descText = typeof link.description === "string" ? link.description.trim() : (link.description ? String(link.description).trim() : "");
 
-        if (glossaryTitle && (!link.description || glossaryDesc !== undefined)) {
+        // Check curated glossary first
+        const glossaryTitle = ACADEMIC_GLOSSARY[titleText];
+        const glossaryDesc = descText ? ACADEMIC_GLOSSARY[descText] : undefined;
+
+        if (glossaryTitle && (!descText || glossaryDesc !== undefined)) {
           updates[link.id] = {
             title: glossaryTitle,
-            description: glossaryDesc || link.description,
+            description: glossaryDesc || descText,
           };
           hasNew = true;
         } else {
           // Asynchronously fetch auto-translation
           try {
             const [tTitle, tDesc] = await Promise.all([
-              autoTranslateThaiToEnglish(link.title),
-              link.description ? autoTranslateThaiToEnglish(link.description) : Promise.resolve("")
+              autoTranslateThaiToEnglish(titleText),
+              descText ? autoTranslateThaiToEnglish(descText) : Promise.resolve("")
             ]);
             if (!isCancelled) {
               updates[link.id] = {
-                title: tTitle || link.title,
-                description: tDesc || link.description,
+                title: tTitle || titleText,
+                description: tDesc || descText,
               };
               hasNew = true;
             }
           } catch (e) {
-            updates[link.id] = { title: link.title, description: link.description };
+            updates[link.id] = { title: titleText, description: descText };
           }
         }
       }
@@ -122,7 +126,7 @@ export default function App() {
     return () => {
       isCancelled = true;
     };
-  }, [lang, links, translatedLinksMap]);
+  }, [lang, links]);
 
   // Dark / Light Theme State
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -241,12 +245,15 @@ export default function App() {
       let linkList: Link[] = [];
       if (savedLinks) {
         try {
-          linkList = JSON.parse(savedLinks);
+          const parsed = JSON.parse(savedLinks);
+          if (Array.isArray(parsed)) {
+            linkList = parsed;
+          }
         } catch (e) {}
       }
 
       // 3. Auto Seed if completely empty
-      if (linkList.length === 0) {
+      if (!Array.isArray(linkList) || linkList.length === 0) {
         linkList = DEFAULT_LINKS().map((l, i) => ({
           id: `seed-link-${i}`,
           ...l
@@ -860,6 +867,7 @@ export default function App() {
   const displayLinks = useMemo(() => {
     if (lang === "th") return links;
     return links.map(link => {
+      if (!link) return link;
       const tInfo = translatedLinksMap[link.id];
       if (tInfo) {
         return {
@@ -868,8 +876,10 @@ export default function App() {
           description: tInfo.description ?? link.description,
         };
       }
-      const glossaryTitle = ACADEMIC_GLOSSARY[link.title.trim()];
-      const glossaryDesc = link.description ? ACADEMIC_GLOSSARY[link.description.trim()] : undefined;
+      const titleText = typeof link.title === "string" ? link.title.trim() : String(link.title || "").trim();
+      const descText = typeof link.description === "string" ? link.description.trim() : (link.description ? String(link.description).trim() : "");
+      const glossaryTitle = ACADEMIC_GLOSSARY[titleText];
+      const glossaryDesc = descText ? ACADEMIC_GLOSSARY[descText] : undefined;
       return {
         ...link,
         title: glossaryTitle || link.title,
@@ -963,8 +973,8 @@ export default function App() {
   }, []);
 
   const myPinnedLinks = useMemo(
-    () => myPins
-      .map(id => displayLinks.find(l => l.id === id))
+    () => (myPins || [])
+      .map(id => displayLinks.find(l => l && l.id === id))
       .filter((l): l is Link => {
         if (!l) return false;
         const aud = l.targetAudience || (l.isStaffOnly ? 'staff' : 'both');
@@ -1192,12 +1202,12 @@ export default function App() {
               </p>
             ) : (
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {myPinnedLinks.map((link) => (
+                {myPinnedLinks.map((link, idx) => (
                   <li key={link.id} className="relative flex items-center gap-3 rounded-2xl bg-[#f3f0ef] dark:bg-[#292429] pl-2 pr-1 py-1.5 hover:bg-[#ebe6e4] dark:hover:bg-[#342e34] transition-colors">
                     {link.thumbnailUrl ? (
                       <img src={link.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-10 h-10 rounded-xl object-cover shrink-0" />
                     ) : (
-                      <SiteIcon link={link} index={links.indexOf(link)} size={40} radius={12} />
+                      <SiteIcon link={link} index={idx} size={40} radius={12} />
                     )}
                     <a
                       href={link.url}
@@ -1308,13 +1318,13 @@ export default function App() {
               )}
             </div>
           ) : (
-            bentoItems.map(({ link, variant, rank }) => (
+            bentoItems.map(({ link, variant, rank }, idx) => (
               <BentoCard
                 key={link.id}
                 link={link}
                 variant={variant}
                 rank={rank}
-                index={links.indexOf(link)}
+                index={idx}
                 isMyPin={myPins.includes(link.id)}
                 isAdmin={isAdmin}
                 lang={lang}
