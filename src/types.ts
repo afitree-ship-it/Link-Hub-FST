@@ -1,9 +1,12 @@
+export type TargetAudience = 'both' | 'student' | 'staff';
+
 export interface Link {
   id: string;
   title: string;
   url: string;
   description?: string;
   isStaffOnly: boolean;
+  targetAudience?: TargetAudience;
   clickCount: number;
   createdAt: string;
   thumbnailUrl?: string;
@@ -21,11 +24,19 @@ export interface AuthCredentials {
   password?: string;
 }
 
+export interface StaffPasswordItem {
+  id: string;
+  label: string;
+  code: string;
+  createdAt: string;
+}
+
 export interface AdminConfig {
   adminPassword?: string;
   announcementText?: string;
   isAnnouncementActive?: boolean;
   staffPasswords?: string[];
+  staffPasswordItems?: StaffPasswordItem[];
   staffCodeHashes?: string[];
   googleSheetId?: string;
   isGoogleSheetSyncEnabled?: boolean;
@@ -34,3 +45,4 @@ export interface AdminConfig {
   siteTitle?: string;
   siteLogoUrl?: string;
 }
+

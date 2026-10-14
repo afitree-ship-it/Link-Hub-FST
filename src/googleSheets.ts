@@ -81,19 +81,47 @@ export const updateSheetData = async (spreadsheetId: string, values: any[][]) =>
   }
 };
 
+export const normalizeLink = (raw: any): Link => {
+  const rawAud = String(raw.targetAudience || (raw.isStaffOnly ? 'staff' : (raw[4] !== undefined ? raw[4] : 'both'))).trim().toLowerCase();
+  let targetAudience: 'both' | 'student' | 'staff' = 'both';
+  if (rawAud === 'staff' || rawAud === 'yes' || rawAud === 'true' || rawAud === 'บุคลากร') {
+    targetAudience = 'staff';
+  } else if (rawAud === 'student' || rawAud === 'นักศึกษา') {
+    targetAudience = 'student';
+  } else {
+    targetAudience = 'both';
+  }
+
+  return {
+    id: String(raw.id || raw[0] || crypto.randomUUID()),
+    title: String(raw.title || raw[1] || ''),
+    url: String(raw.url || raw[2] || ''),
+    description: String(raw.description !== undefined ? raw.description : (raw[3] || '')),
+    targetAudience,
+    isStaffOnly: targetAudience === 'staff',
+    clickCount: parseInt(raw.clickCount !== undefined ? raw.clickCount : (raw[5] || '0'), 10) || 0,
+    createdAt: String(raw.createdAt || raw[6] || new Date().toISOString()),
+    thumbnailUrl: String(raw.thumbnailUrl !== undefined ? raw.thumbnailUrl : (raw[7] || '')),
+    isPinned: raw.isPinned === true || raw.isPinned === 'Yes' || raw[8] === 'Yes' || raw[8] === true,
+  };
+};
+
 export const syncLinksToGoogleSheet = async (spreadsheetId: string, links: Link[]) => {
   const headers = ['ID', 'Title', 'URL', 'Description', 'Is Staff Only', 'Click Count', 'Created At', 'Thumbnail URL', 'Is Pinned'];
-  const rows = links.map(link => [
-    link.id,
-    link.title,
-    link.url,
-    link.description || '',
-    link.isStaffOnly ? 'Yes' : 'No',
-    link.clickCount.toString(),
-    link.createdAt,
-    link.thumbnailUrl || '',
-    link.isPinned ? 'Yes' : 'No'
-  ]);
+  const rows = links.map(link => {
+    const audienceValue = link.targetAudience === 'staff' ? 'Staff' : (link.targetAudience === 'student' ? 'Student' : (link.isStaffOnly ? 'Staff' : 'Both'));
+    return [
+      link.id,
+      link.title,
+      link.url,
+      link.description || '',
+      audienceValue,
+      link.clickCount.toString(),
+      link.createdAt,
+      link.thumbnailUrl || '',
+      link.isPinned ? 'Yes' : 'No'
+    ];
+  });
 
   await updateSheetData(spreadsheetId, [headers, ...rows]);
 };
@@ -214,15 +242,5 @@ export const loadLinksFromGoogleSheet = async (spreadsheetId: string): Promise<L
   const data = await response.json();
   const rows = data.values || [];
 
-  return rows.map((row: any[]) => ({
-    id: row[0] || crypto.randomUUID(),
-    title: row[1] || '',
-    url: row[2] || '',
-    description: row[3] || '',
-    isStaffOnly: row[4] === 'Yes',
-    clickCount: parseInt(row[5] || '0', 10) || 0,
-    createdAt: row[6] || new Date().toISOString(),
-    thumbnailUrl: row[7] || '',
-    isPinned: row[8] === 'Yes',
-  }));
+  return rows.map((row: any[]) => normalizeLink(row));
 };

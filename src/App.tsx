@@ -28,17 +28,19 @@ import {
   ChevronDown,
   Check,
   ArrowUp,
-  Pin
+  Pin,
+  Briefcase
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { hashStaffCode, parseStaffCodeHashes } from "./staffCodes";
-import { sendActionToWebApp, getLastWriteAt, WRITE_SETTLE_MS, DEFAULT_GAS_URL } from "./googleSheets";
+import { sendActionToWebApp, getLastWriteAt, WRITE_SETTLE_MS, DEFAULT_GAS_URL, normalizeLink } from "./googleSheets";
 
 export default function App() {
   const [links, setLinks] = useState<Link[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"student" | "staff">("student");
+  const [staffAudienceFilter, setStaffAudienceFilter] = useState<"all" | "only_staff">("all");
   const [layoutMode, setLayoutMode] = useState<"grid" | "list" | "compact">("grid");
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -144,6 +146,8 @@ export default function App() {
           ...l
         }));
         localStorage.setItem("scitech_links", JSON.stringify(linkList));
+      } else {
+        linkList = linkList.map(normalizeLink);
       }
 
       // ⚡ INSTANT RENDER: Present content instantly without waiting for network cold starts!
@@ -167,10 +171,11 @@ export default function App() {
               fetchedLinks = resJson.data;
             }
             if (fetchedLinks && fetchedLinks.length > 0) {
+              const normalized = fetchedLinks.map(normalizeLink);
               setLinks(prev => {
-                if (JSON.stringify(prev) !== JSON.stringify(fetchedLinks)) {
-                  localStorage.setItem("scitech_links", JSON.stringify(fetchedLinks));
-                  return fetchedLinks;
+                if (JSON.stringify(prev) !== JSON.stringify(normalized)) {
+                  localStorage.setItem("scitech_links", JSON.stringify(normalized));
+                  return normalized;
                 }
                 return prev;
               });
@@ -203,6 +208,24 @@ export default function App() {
                   merged.staffCodeHashes = hashes;
                   changed = true;
                 }
+              }
+              if (resJson.settings.staffPasswords !== undefined) {
+                try {
+                  const sp = typeof resJson.settings.staffPasswords === "string" ? JSON.parse(resJson.settings.staffPasswords) : resJson.settings.staffPasswords;
+                  if (Array.isArray(sp)) {
+                    merged.staffPasswords = sp;
+                    changed = true;
+                  }
+                } catch (e) {}
+              }
+              if (resJson.settings.staffPasswordItems !== undefined) {
+                try {
+                  const spi = typeof resJson.settings.staffPasswordItems === "string" ? JSON.parse(resJson.settings.staffPasswordItems) : resJson.settings.staffPasswordItems;
+                  if (Array.isArray(spi)) {
+                    merged.staffPasswordItems = spi;
+                    changed = true;
+                  }
+                } catch (e) {}
               }
               if (changed) {
                 localStorage.setItem("scitech_admin_config", JSON.stringify(merged));
@@ -377,7 +400,9 @@ export default function App() {
     const code = password.trim();
     if (!code) return false;
     const hash = await hashStaffCode(code);
-    if ((adminConfig.staffCodeHashes || []).includes(hash) || (adminConfig.staffPasswords || []).includes(code)) return true;
+    if ((adminConfig.staffCodeHashes || []).includes(hash)) return true;
+    if ((adminConfig.staffPasswords || []).some(p => p.toLowerCase() === code.toLowerCase())) return true;
+    if (adminConfig.staffPasswordItems?.some(i => i.code.toLowerCase() === code.toLowerCase())) return true;
 
     try {
       const cached: (User & { password?: string })[] = JSON.parse(localStorage.getItem("scitech_admin_users") || "[]");
@@ -562,6 +587,24 @@ export default function App() {
                       changed = true;
                     }
                   }
+                  if (responseData.settings.staffPasswords !== undefined) {
+                    try {
+                      const sp = typeof responseData.settings.staffPasswords === "string" ? JSON.parse(responseData.settings.staffPasswords) : responseData.settings.staffPasswords;
+                      if (Array.isArray(sp)) {
+                        merged.staffPasswords = sp;
+                        changed = true;
+                      }
+                    } catch (e) {}
+                  }
+                  if (responseData.settings.staffPasswordItems !== undefined) {
+                    try {
+                      const spi = typeof responseData.settings.staffPasswordItems === "string" ? JSON.parse(responseData.settings.staffPasswordItems) : responseData.settings.staffPasswordItems;
+                      if (Array.isArray(spi)) {
+                        merged.staffPasswordItems = spi;
+                        changed = true;
+                      }
+                    } catch (e) {}
+                  }
                   if (changed) {
                     localStorage.setItem("scitech_admin_config", JSON.stringify(merged));
                     return merged;
@@ -572,11 +615,12 @@ export default function App() {
             }
 
             if (fetchedLinks && isMounted) {
+              const normalized = fetchedLinks.map(normalizeLink);
               setLinks(prev => {
-                const isSame = JSON.stringify(prev) === JSON.stringify(fetchedLinks);
+                const isSame = JSON.stringify(prev) === JSON.stringify(normalized);
                 if (!isSame) {
-                  localStorage.setItem("scitech_links", JSON.stringify(fetchedLinks));
-                  return fetchedLinks;
+                  localStorage.setItem("scitech_links", JSON.stringify(normalized));
+                  return normalized;
                 }
                 return prev;
               });
@@ -676,10 +720,25 @@ export default function App() {
   // Filtering Logic
   const filteredLinks = useMemo(() => {
     const filtered = links.filter(link => {
+      const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+
       // 1. Audience Filter
-      if (viewMode === "student" && link.isStaffOnly) {
-        return false;
+      if (viewMode === "student") {
+        // Students see student-only and both (hide staff-only links)
+        if (aud === "staff") {
+          return false;
+        }
+      } else if (viewMode === "staff") {
+        // Staff see staff-only and both (hide student-only links that don't target staff)
+        if (aud === "student") {
+          return false;
+        }
+        // Sub-filter if staff toggled "เฉพาะบุคลากรเท่านั้น"
+        if (staffAudienceFilter === "only_staff" && aud !== "staff") {
+          return false;
+        }
       }
+
       // 2. Search Filter
       const matchSearch = 
         link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -701,7 +760,7 @@ export default function App() {
       // Then by creation date (newest first, or keep default order)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [links, searchQuery, viewMode]);
+  }, [links, searchQuery, viewMode, staffAudienceFilter, currentUser, isAdmin]);
 
   // Personal pins: kept in this browser only, so every visitor has their own list.
   const [myPins, setMyPins] = useState<string[]>(() => {
@@ -726,11 +785,22 @@ export default function App() {
   const myPinnedLinks = useMemo(
     () => myPins
       .map(id => links.find(l => l.id === id))
-      .filter((l): l is Link => !!l && (viewMode === "staff" || !l.isStaffOnly)),
+      .filter((l): l is Link => {
+        if (!l) return false;
+        const aud = l.targetAudience || (l.isStaffOnly ? 'staff' : 'both');
+        if (viewMode === "student" && aud === "staff") return false;
+        if (viewMode === "staff" && aud === "student") return false;
+        return true;
+      }),
     [myPins, links, viewMode]
   );
 
-  const staffLinkCount = useMemo(() => links.filter(l => l.isStaffOnly).length, [links]);
+  const staffLinkCount = useMemo(() => {
+    return links.filter(l => {
+      const aud = l.targetAudience || (l.isStaffOnly ? 'staff' : 'both');
+      return aud === 'staff';
+    }).length;
+  }, [links]);
 
   // Bento order: faculty pins first, then most clicked. Two feature tiles, one wide tile, the rest small.
   const bentoItems = useMemo(() => {
@@ -810,6 +880,64 @@ export default function App() {
             </button>
           )}
         </div>
+
+        {/* Staff Mode Status Banner & Filter */}
+        {viewMode === "staff" && (
+          <div className="bg-white rounded-2xl p-3 md:px-5 md:py-3.5 border border-[#5c0620]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-xl bg-[#5c0620] text-white flex items-center justify-center shrink-0">
+                <Briefcase className="w-4 h-4" />
+              </span>
+              <div>
+                <div className="font-bold text-sm text-slate-800 flex items-center gap-2 flex-wrap">
+                  <span>โหมดบุคลากร (Staff Portal)</span>
+                  <span className="text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-full">
+                    แสดงเฉพาะระบบสำหรับบุคลากร & ทั่วไป
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  ซ่อนลิงก์เฉพาะนักศึกษาโดยอัตโนมัติ ({filteredLinks.length} รายการที่ตรงกับสิทธิ์)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
+              <div className="flex bg-slate-100 p-1 rounded-xl gap-1 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setStaffAudienceFilter("all")}
+                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    staffAudienceFilter === "all" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  ทั้งหมดของบุคลากร
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStaffAudienceFilter("only_staff")}
+                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    staffAudienceFilter === "only_staff" ? "bg-[#5c0620] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  เฉพาะบุคลากรเท่านั้น
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.removeItem("scitech_staff_session");
+                  setViewMode("student");
+                }}
+                className="px-3 py-1.5 text-xs text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 font-semibold"
+                title="ออกจากโหมดบุคลากร"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>ออกจากโหมดนี้</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 grid-flow-dense">
 

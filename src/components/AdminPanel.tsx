@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Link, AdminConfig, User, AuthCredentials } from "../types";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { Link, AdminConfig, User, AuthCredentials, StaffPasswordItem } from "../types";
 import { 
   X, Save, Trash2, Edit2, Key, Info, FolderPlus, 
   Grid, Link2, CheckCircle2, AlertCircle, RefreshCw, Settings,
   Upload, FileImage, Pin, BarChart3, Bell, Plus, Users, ShieldAlert,
-  Lock, Download, Copy, Check, FileJson
+  Lock, Download, Copy, Check, FileJson, GraduationCap, Briefcase,
+  ExternalLink, Eye, TrendingUp, Sparkles, BarChart2
 } from "lucide-react";
 import { AVAILABLE_ICONS, DynamicIcon } from "./DynamicIcon";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -26,7 +27,7 @@ interface AdminPanelProps {
   onDeleteLink: (id: string) => Promise<void>;
 }
 
-const GAS_SCRIPT_TEMPLATE = `var SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
+const GAS_SCRIPT_TEMPLATE = `var SPREADSHEET_ID = "1pphCw3O30znOqQeyAgYsv9P4M6SRVGFVdn_aDbDqwPY";
 var SHEET_NAME = "Links";
 var SETTINGS_SHEET_NAME = "Settings";
 var ADMINS_SHEET_NAME = "Admins";
@@ -40,7 +41,7 @@ function initialSetup() {
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow([
-      "ID", "Title", "URL", "Description", "Is Staff Only", "Click Count", "Created At", "Thumbnail URL", "Is Pinned"
+      "ID", "Title", "URL", "Description", "Target Audience", "Click Count", "Created At", "Thumbnail URL", "Is Pinned"
     ]);
     sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
   }
@@ -55,6 +56,8 @@ function initialSetup() {
     settingsSheet.appendRow(["siteLogoUrl", ""]);
     settingsSheet.appendRow(["announcementText", ""]);
     settingsSheet.appendRow(["isAnnouncementActive", "false"]);
+    settingsSheet.appendRow(["staffPasswords", "[]"]);
+    settingsSheet.appendRow(["staffPasswordItems", "[]"]);
   }
 
   // 3. ชีต Admins
@@ -83,7 +86,7 @@ function getSheet() {
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow([
-      "ID", "Title", "URL", "Description", "Is Staff Only", "Click Count", "Created At", "Thumbnail URL", "Is Pinned"
+      "ID", "Title", "URL", "Description", "Target Audience", "Click Count", "Created At", "Thumbnail URL", "Is Pinned"
     ]);
     sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
   }
@@ -130,12 +133,23 @@ function doGet(e) {
     for (var i = 1; i < rows.length; i++) {
       var row = rows[i];
       if (row[0]) {
+        var rawAud = String(row[4] || "").trim().toLowerCase();
+        var targetAudience = "both";
+        if (rawAud === "staff" || rawAud === "yes" || rawAud === "true" || rawAud === "บุคลากร") {
+          targetAudience = "staff";
+        } else if (rawAud === "student" || rawAud === "นักศึกษา") {
+          targetAudience = "student";
+        } else {
+          targetAudience = "both";
+        }
+
         results.push({
           id: String(row[0]),
           title: String(row[1]),
           url: String(row[2]),
           description: String(row[3]),
-          isStaffOnly: row[4] === "Yes" || row[4] === true,
+          targetAudience: targetAudience,
+          isStaffOnly: targetAudience === "staff",
           clickCount: parseInt(row[5] || "0", 10) || 0,
           createdAt: String(row[6]),
           thumbnailUrl: String(row[7]),
@@ -151,7 +165,7 @@ function doGet(e) {
       var settingsRows = settingsSheet.getDataRange().getValues();
       for (var j = 1; j < settingsRows.length; j++) {
         var key = String(settingsRows[j][0]).trim();
-        if (key && key !== "adminPassword" && key !== "staffPasswords") {
+        if (key && key !== "adminPassword") {
           settings[key] = String(settingsRows[j][1]);
         }
       }
@@ -198,12 +212,13 @@ function doPost(e) {
           var rows = [];
           for (var i = 0; i < links.length; i++) {
             var link = links[i];
+            var audVal = link.targetAudience === "staff" ? "Staff" : (link.targetAudience === "student" ? "Student" : (link.isStaffOnly ? "Staff" : "Both"));
             rows.push([
               link.id || "",
               link.title || "",
               link.url || "",
               link.description || "",
-              link.isStaffOnly ? 'Yes' : 'No',
+              audVal,
               link.clickCount || 0,
               link.createdAt || "",
               link.thumbnailUrl || "",
@@ -242,6 +257,7 @@ function doPost(e) {
     // 2. เพิ่มหรือแก้ไขลิงก์เดี่ยว
     else if (action === "add" || action === "update") {
       var link = postData.link;
+      var audVal = link.targetAudience === "staff" ? "Staff" : (link.targetAudience === "student" ? "Student" : (link.isStaffOnly ? "Staff" : "Both"));
       var rows = sheet.getDataRange().getValues();
       var found = false;
       for (var i = 1; i < rows.length; i++) {
@@ -251,7 +267,7 @@ function doPost(e) {
             link.title || "",
             link.url || "",
             link.description || "",
-            link.isStaffOnly ? 'Yes' : 'No',
+            audVal,
             link.clickCount || 0,
             link.createdAt || "",
             link.thumbnailUrl || "",
@@ -267,7 +283,7 @@ function doPost(e) {
           link.title || "",
           link.url || "",
           link.description || "",
-          link.isStaffOnly ? 'Yes' : 'No',
+          audVal,
           link.clickCount || 0,
           link.createdAt || "",
           link.thumbnailUrl || "",
@@ -291,14 +307,16 @@ function doPost(e) {
     else if (action === "incrementClick") {
       var id = postData.id;
       var rows = sheet.getDataRange().getValues();
+      var newCount = 0;
       for (var i = 1; i < rows.length; i++) {
         if (String(rows[i][0]) === String(id)) {
           var currentClick = parseInt(rows[i][5] || "0", 10);
-          sheet.getRange(i + 1, 6).setValue(currentClick + 1);
+          newCount = currentClick + 1;
+          sheet.getRange(i + 1, 6).setValue(newCount);
           break;
         }
       }
-      out = { success: true };
+      out = { success: true, id: id, newClickCount: newCount };
     } 
     // 5. บันทึกการตั้งค่าเว็บไซต์ (Settings)
     else if (action === "saveSettings") {
@@ -324,29 +342,80 @@ function doPost(e) {
       }
       out = { success: true };
     }
+    // 5.1 บันทึกรหัสผ่านบุคลากร (Staff Passwords)
+    else if (action === "saveStaffPasswords") {
+      var meStaff = findAdmin(postData.auth && postData.auth.username, postData.auth && postData.auth.password);
+      if (!meStaff) {
+        out = { success: false, error: "Unauthorized" };
+      } else {
+        var settingsSheet = getSettingsSheet();
+        var sRows = settingsSheet.getDataRange().getValues();
+        var keysToUpdate = {
+          "staffPasswords": JSON.stringify(postData.passwords || []),
+          "staffPasswordItems": JSON.stringify(postData.passwordItems || [])
+        };
+        for (var skey in keysToUpdate) {
+          var sval = keysToUpdate[skey];
+          var fK = false;
+          for (var r = 1; r < sRows.length; r++) {
+            if (String(sRows[r][0]) === skey) {
+              settingsSheet.getRange(r + 1, 2).setValue(sval);
+              fK = true;
+              break;
+            }
+          }
+          if (!fK) {
+            settingsSheet.appendRow([skey, sval]);
+            sRows.push([skey, sval]);
+          }
+        }
+        out = { success: true };
+      }
+    }
     // 6. เข้าสู่ระบบด้วยบัญชีในชีต Admins
     else if (action === "login") {
       var user = findAdmin(postData.username, postData.password);
       out = user ? { success: true, user: user } : { success: false, error: "Invalid credentials" };
     }
-    // 6.1 เข้าหมวดบุคลากรด้วยรหัสผ่านอย่างเดียว (ตรงกับรหัสผ่านของบัญชีใดก็ได้ในชีต Admins)
+    // 6.1 เข้าหมวดบุคลากรด้วยรหัสผ่านอย่างเดียว (ตรงกับรหัสผ่านของบัญชีใดก็ได้ในชีต Admins หรือ Settings)
     else if (action === "staffLogin") {
-      var pw = String(postData.password || "");
+      var pw = String(postData.password || "").trim();
       var ok = false;
       if (pw) {
+        // 1. ตรวจสอบในชีต Admins
         var aRows = getAdminsSheet().getDataRange().getValues();
         for (var sr = 1; sr < aRows.length; sr++) {
           if (String(aRows[sr][0]) && String(aRows[sr][1]) === pw) { ok = true; break; }
         }
+        // 2. ตรวจสอบในชีต Settings (staffPasswords / staffPasswordItems)
+        if (!ok) {
+          var sRows = getSettingsSheet().getDataRange().getValues();
+          for (var sk = 1; sk < sRows.length; sk++) {
+            var sKey = String(sRows[sk][0]).trim();
+            if (sKey === "staffPasswords" || sKey === "staffPasswordItems") {
+              try {
+                var list = JSON.parse(String(sRows[sk][1]));
+                if (Array.isArray(list)) {
+                  for (var li = 0; li < list.length; li++) {
+                    var item = list[li];
+                    if (typeof item === "string" && item === pw) { ok = true; break; }
+                    if (item && item.code === pw) { ok = true; break; }
+                  }
+                }
+              } catch(e) {}
+            }
+          }
+        }
       }
       out = ok ? { success: true } : { success: false, error: "Invalid password" };
     }
-    // 7. เพิ่มหรือแก้ไขแอดมิน (เฉพาะ superadmin หรือแก้รหัสผ่านตัวเอง)
+    // 7. เพิ่มหรือแก้ไขแอดมิน (superadmin หรือแอดมินเพิ่มบทบาท staff หรือแก้รหัสตัวเอง)
     else if (action === "saveAdmin") {
       var me = findAdmin(postData.auth && postData.auth.username, postData.auth && postData.auth.password);
       var admin = postData.admin || {};
       var isSelf = me && String(me.username).toLowerCase() === String(admin.username || "").toLowerCase();
-      if (!me || (me.role !== "superadmin" && !isSelf)) {
+      var isStaffAccount = admin.role === "staff";
+      if (!me || (me.role !== "superadmin" && !isSelf && !isStaffAccount)) {
         out = { success: false, error: "Unauthorized" };
       } else {
         var adminsSheet = getAdminsSheet();
@@ -355,28 +424,33 @@ function doPost(e) {
         for (var a = 1; a < aRows.length; a++) {
           if (String(aRows[a][0]).toLowerCase() === String(admin.username).toLowerCase()) {
             adminsSheet.getRange(a + 1, 2).setValue(admin.password);
-            if (me.role === "superadmin" && admin.role) adminsSheet.getRange(a + 1, 3).setValue(admin.role);
+            if ((me.role === "superadmin" || isStaffAccount) && admin.role) {
+              adminsSheet.getRange(a + 1, 3).setValue(admin.role);
+            }
             aFound = true;
             break;
           }
         }
         if (!aFound) {
-          adminsSheet.appendRow([admin.username, admin.password, admin.role || "admin", "[]"]);
+          adminsSheet.appendRow([admin.username, admin.password, admin.role || "staff", "[]"]);
         }
         out = { success: true };
       }
     }
-    // 8. ลบแอดมิน (เฉพาะ superadmin)
+    // 8. ลบแอดมิน (superadmin หรือลบบัญชี staff)
     else if (action === "deleteAdmin") {
       var me2 = findAdmin(postData.auth && postData.auth.username, postData.auth && postData.auth.password);
-      if (!me2 || me2.role !== "superadmin") {
+      if (!me2) {
         out = { success: false, error: "Unauthorized" };
       } else {
         var adminsSheet2 = getAdminsSheet();
         var dRows = adminsSheet2.getDataRange().getValues();
         for (var d = dRows.length - 1; d >= 1; d--) {
           if (String(dRows[d][0]).toLowerCase() === String(postData.username).toLowerCase()) {
-            adminsSheet2.deleteRow(d + 1);
+            var targetRole = String(dRows[d][2] || "admin");
+            if (me2.role === "superadmin" || targetRole === "staff") {
+              adminsSheet2.deleteRow(d + 1);
+            }
           }
         }
         out = { success: true };
@@ -436,7 +510,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onUpdateLink,
   onDeleteLink,
 }) => {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "links" | "sheets" | "security" | "admins">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "links" | "sheets" | "staff" | "security" | "admins">("dashboard");
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
 
   // Success / Error messages
@@ -586,7 +660,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   
   // Staff Password Form State
   const [staffPasswords, setStaffPasswords] = useState<string[]>(adminConfig.staffPasswords || []);
+  const [staffPasswordItems, setStaffPasswordItems] = useState<StaffPasswordItem[]>(() => {
+    if (adminConfig.staffPasswordItems && adminConfig.staffPasswordItems.length > 0) {
+      return adminConfig.staffPasswordItems;
+    }
+    return (adminConfig.staffPasswords || []).map((code, idx) => ({
+      id: `spw-${idx}`,
+      label: idx === 0 ? "รหัสกลางบุคลากร" : `รหัสบุคลากรชุดที่ ${idx + 1}`,
+      code,
+      createdAt: new Date().toISOString()
+    }));
+  });
   const [newStaffPassword, setNewStaffPassword] = useState("");
+  const [newStaffPasswordLabel, setNewStaffPasswordLabel] = useState("");
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+
+  // New Staff Account (Individual login) Form State
+  const [newStaffUsername, setNewStaffUsername] = useState("");
+  const [newStaffAccountPassword, setNewStaffAccountPassword] = useState("");
   
   // Site Info Form State
   const [siteTitle, setSiteTitle] = useState(adminConfig.siteTitle || "");
@@ -598,14 +689,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setAnnouncementText(adminConfig.announcementText || "");
       setIsAnnouncementActive(adminConfig.isAnnouncementActive || false);
       setStaffPasswords(adminConfig.staffPasswords || []);
+      if (adminConfig.staffPasswordItems && adminConfig.staffPasswordItems.length > 0) {
+        setStaffPasswordItems(adminConfig.staffPasswordItems);
+      } else if (adminConfig.staffPasswords && adminConfig.staffPasswords.length > 0) {
+        setStaffPasswordItems(adminConfig.staffPasswords.map((code, idx) => ({
+          id: `spw-${idx}`,
+          label: idx === 0 ? "รหัสกลางบุคลากร" : `รหัสบุคลากรชุดที่ ${idx + 1}`,
+          code,
+          createdAt: new Date().toISOString()
+        })));
+      }
       setSiteTitle(adminConfig.siteTitle || "");
       setSiteLogoUrl(adminConfig.siteLogoUrl || "");
     }
   }, [isOpen, adminConfig]);
 
-  // Is Staff Only State
+  // Target Audience & Pin State
+  const [linkTargetAudience, setLinkTargetAudience] = useState<"both" | "student" | "staff">("both");
   const [linkIsStaffOnly, setLinkIsStaffOnly] = useState(false);
   const [linkIsPinned, setLinkIsPinned] = useState(false);
+
+  // Dashboard Real-time table filter & search
+  const [dashboardSearch, setDashboardSearch] = useState("");
+  const [dashboardAudienceFilter, setDashboardAudienceFilter] = useState<"all" | "student" | "staff" | "both">("all");
 
   // Custom Confirm State
   const [linkToDelete, setLinkToDelete] = useState<{ id: string; title: string } | null>(null);
@@ -763,6 +869,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       return;
     }
 
+    const targetAud = linkTargetAudience;
+    const isStaff = targetAud === "staff";
+
     setIsSubmitting(true);
     try {
       if (editingLinkId) {
@@ -770,7 +879,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           title: linkTitle,
           url: linkUrl,
           description: linkDesc,
-          isStaffOnly: linkIsStaffOnly,
+          targetAudience: targetAud,
+          isStaffOnly: isStaff,
           thumbnailUrl: linkThumbnailUrl,
           isPinned: linkIsPinned,
         });
@@ -781,7 +891,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           title: linkTitle,
           url: linkUrl,
           description: linkDesc,
-          isStaffOnly: linkIsStaffOnly,
+          targetAudience: targetAud,
+          isStaffOnly: isStaff,
           thumbnailUrl: linkThumbnailUrl,
           isPinned: linkIsPinned,
         });
@@ -791,6 +902,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setLinkTitle("");
       setLinkUrl("");
       setLinkDesc("");
+      setLinkTargetAudience("both");
       setLinkIsStaffOnly(false);
       setLinkIsPinned(false);
       setLinkThumbnailUrl("");
@@ -895,21 +1007,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Handle Staff Password Update
   const handleAddStaffPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStaffPassword.trim()) return;
+    const code = newStaffPassword.trim();
+    if (!code) return;
     
     setIsSubmitting(true);
     try {
-      const updatedPasswords = [...staffPasswords, newStaffPassword.trim()];
+      const label = newStaffPasswordLabel.trim() || `รหัสบุคลากรชุดที่ ${staffPasswordItems.length + 1}`;
+      const newItem: StaffPasswordItem = {
+        id: `spw-${Date.now()}`,
+        label,
+        code,
+        createdAt: new Date().toISOString()
+      };
+      const updatedItems = [...staffPasswordItems.filter(i => i.code !== code), newItem];
+      const updatedPasswords = Array.from(new Set([...staffPasswords, code]));
+      
       const { hashStaffCode } = await import('../staffCodes');
-      const newHash = await hashStaffCode(newStaffPassword);
+      const newHash = await hashStaffCode(code);
       const existingHashes = adminConfig.staffCodeHashes || [];
-      await onUpdateConfig({
-        staffPasswords: updatedPasswords,
-        staffCodeHashes: existingHashes.includes(newHash) ? existingHashes : [...existingHashes, newHash]
-      });
+      const updatedHashes = existingHashes.includes(newHash) ? existingHashes : [...existingHashes, newHash];
+
       setStaffPasswords(updatedPasswords);
+      setStaffPasswordItems(updatedItems);
       setNewStaffPassword("");
-      showAlert("เพิ่มรหัสผ่านสำหรับหมวดหมู่บุคลากรสำเร็จ");
+      setNewStaffPasswordLabel("");
+
+      await onUpdateConfig({
+        ...adminConfig,
+        staffPasswords: updatedPasswords,
+        staffPasswordItems: updatedItems,
+        staffCodeHashes: updatedHashes
+      });
+
+      if (adminConfig.googleAppsScriptUrl && authCreds) {
+        const { sendActionToWebApp } = await import('../googleSheets');
+        sendActionToWebApp(adminConfig.googleAppsScriptUrl, 'saveStaffPasswords', {
+          passwords: updatedPasswords,
+          passwordItems: updatedItems
+        }, authCreds);
+      }
+
+      showAlert(`เพิ่มรหัสผ่านบุคลากร "${code}" เรียบร้อยแล้ว`);
     } catch (err) {
       showAlert("เกิดข้อผิดพลาดในการเพิ่มรหัสผ่านบุคลากร", "error");
     } finally {
@@ -921,16 +1059,77 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsSubmitting(true);
     try {
       const updatedPasswords = staffPasswords.filter(p => p !== passwordToRemove);
+      const updatedItems = staffPasswordItems.filter(i => i.code !== passwordToRemove);
       const { hashStaffCode } = await import('../staffCodes');
       const removedHash = await hashStaffCode(passwordToRemove);
-      await onUpdateConfig({
-        staffPasswords: updatedPasswords,
-        staffCodeHashes: (adminConfig.staffCodeHashes || []).filter(h => h !== removedHash)
-      });
+      const updatedHashes = (adminConfig.staffCodeHashes || []).filter(h => h !== removedHash);
+
       setStaffPasswords(updatedPasswords);
+      setStaffPasswordItems(updatedItems);
+
+      await onUpdateConfig({
+        ...adminConfig,
+        staffPasswords: updatedPasswords,
+        staffPasswordItems: updatedItems,
+        staffCodeHashes: updatedHashes
+      });
+
+      if (adminConfig.googleAppsScriptUrl && authCreds) {
+        const { sendActionToWebApp } = await import('../googleSheets');
+        sendActionToWebApp(adminConfig.googleAppsScriptUrl, 'saveStaffPasswords', {
+          passwords: updatedPasswords,
+          passwordItems: updatedItems
+        }, authCreds);
+      }
+
       showAlert("ลบรหัสผ่านสำหรับหมวดหมู่บุคลากรสำเร็จ");
     } catch (err) {
       showAlert("เกิดข้อผิดพลาดในการลบรหัสผ่านบุคลากร", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGenerateRandomStaffCode = () => {
+    const prefixes = ["FST-STAFF", "SCI-TECH", "STAFF"];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    setNewStaffPassword(`${prefix}-${randomNum}`);
+  };
+
+  const handleCopyCode = (id: string, code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2000);
+    showAlert(`คัดลอกรหัสผ่าน "${code}" แล้ว`);
+  };
+
+  const handleAddStaffAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStaffUsername.trim() || !newStaffAccountPassword.trim()) {
+      showAlert("กรุณากรอก Username และ Password ของบุคลากร", "error");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      if (adminConfig.googleAppsScriptUrl && authCreds) {
+        await addAdminViaWebApp(adminConfig.googleAppsScriptUrl, {
+          username: newStaffUsername.trim(),
+          password: newStaffAccountPassword.trim(),
+          role: "staff"
+        }, authCreds);
+      }
+      const updated = [
+        ...adminUsers.filter(a => a.username.toLowerCase() !== newStaffUsername.trim().toLowerCase()),
+        { username: newStaffUsername.trim(), role: "staff" as const, password: newStaffAccountPassword.trim(), pinnedLinks: [] }
+      ];
+      setAdminUsers(updated);
+      localStorage.setItem("scitech_admin_users", JSON.stringify(updated));
+      setNewStaffUsername("");
+      setNewStaffAccountPassword("");
+      showAlert(`เพิ่มบัญชีบุคลากร "${newStaffUsername.trim()}" สำเร็จ`);
+    } catch (err) {
+      showAlert("เกิดข้อผิดพลาดในการเพิ่มบัญชีบุคลากร", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -1023,7 +1222,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setLinkTitle(link.title);
     setLinkUrl(link.url);
     setLinkDesc(link.description || "");
-    setLinkIsStaffOnly(link.isStaffOnly || false);
+    const aud = link.targetAudience || (link.isStaffOnly ? "staff" : "both");
+    setLinkTargetAudience(aud);
+    setLinkIsStaffOnly(aud === "staff");
     setLinkIsPinned(link.isPinned || false);
     setLinkThumbnailUrl(link.thumbnailUrl || "");
     // Scroll to form
@@ -1076,15 +1277,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  // Top Links for Analytics
-  const topLinksData = [...links]
-    .sort((a, b) => b.clickCount - a.clickCount)
-    .slice(0, 5)
-    .map((l) => ({
-      name: l.title.length > 20 ? l.title.substring(0, 20) + "..." : l.title,
-      clicks: l.clickCount || 0,
-      fullTitle: l.title
-    }));
+  // Analytics and Real-time Statistics
+  const totalClicks = useMemo(() => links.reduce((sum, l) => sum + (l.clickCount || 0), 0), [links]);
+  const staffLinksCount = useMemo(() => links.filter(l => (l.targetAudience === 'staff' || l.isStaffOnly)).length, [links]);
+  const studentLinksCount = useMemo(() => links.filter(l => l.targetAudience === 'student').length, [links]);
+  const bothLinksCount = useMemo(() => links.filter(l => l.targetAudience === 'both' || (!l.targetAudience && !l.isStaffOnly)).length, [links]);
+
+  const topLinksData = useMemo(() => {
+    return [...links]
+      .sort((a, b) => (b.clickCount || 0) - (a.clickCount || 0))
+      .slice(0, 10)
+      .map((l) => ({
+        name: l.title.length > 22 ? l.title.substring(0, 22) + "..." : l.title,
+        clicks: l.clickCount || 0,
+        fullTitle: l.title
+      }));
+  }, [links]);
+
+  // Filtered links for Real-time Dashboard table
+  const dashboardFilteredLinks = useMemo(() => {
+    return links.filter(link => {
+      const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+      if (dashboardAudienceFilter !== "all" && aud !== dashboardAudienceFilter) {
+        return false;
+      }
+      if (dashboardSearch.trim()) {
+        const q = dashboardSearch.toLowerCase();
+        return link.title.toLowerCase().includes(q) || link.url.toLowerCase().includes(q) || (link.description && link.description.toLowerCase().includes(q));
+      }
+      return true;
+    }).sort((a, b) => (b.clickCount || 0) - (a.clickCount || 0));
+  }, [links, dashboardAudienceFilter, dashboardSearch]);
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1186,6 +1409,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab("staff")}
+              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+                activeTab === "staff"
+                  ? "bg-white text-rose-900 shadow-xs border border-slate-200/50"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+              }`}
+            >
+              <Key className="w-4 h-4" />
+              <span>รหัสผ่านบุคลากร ({staffPasswordItems.length})</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab("security")}
               className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
                 activeTab === "security"
@@ -1219,19 +1454,85 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {/* TAB 0: DASHBOARD */}
           {activeTab === "dashboard" && (
             <div className="space-y-6">
+              {/* Top Banner with Real-time Status */}
+              <div className="bg-gradient-to-r from-rose-950 via-[#5c0620] to-[#3a0210] text-white p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-xs uppercase tracking-wider font-bold text-emerald-300">Live Real-time Analytics</span>
+                  </div>
+                  <h3 className="text-lg font-bold">สถิติการเข้าใช้งานระบบ & ลิงก์สำคัญแบบเรียลไทม์</h3>
+                  <p className="text-xs text-rose-200 mt-0.5">ยอดการคลิกเข้าชมจะอัปเดตแบบเรียลไทม์ทันทีเมื่อมีผู้ใช้งานคลิกจากทุกอุปกรณ์</p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-center">
+                  <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md text-xs font-semibold flex items-center gap-1.5 border border-white/10">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>ซิงค์อัตโนมัติ</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span className="text-xs font-semibold">ยอดคลิกเข้าชมรวม</span>
+                    <BarChart2 className="w-4 h-4 text-[#5c0620]" />
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900">{totalClicks.toLocaleString()}</div>
+                  <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>จากทุกลิงก์ในระบบ</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span className="text-xs font-semibold">ลิงก์ทั้งหมด</span>
+                    <Link2 className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900">{links.length}</div>
+                  <div className="text-[11px] text-slate-500 font-medium">รายการในพอร์ทัล</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span className="text-xs font-semibold">เฉพาะบุคลากร</span>
+                    <Briefcase className="w-4 h-4 text-[#5c0620]" />
+                  </div>
+                  <div className="text-2xl font-extrabold text-rose-900">{staffLinksCount}</div>
+                  <div className="text-[11px] text-rose-600 font-semibold">ระบบภายในต้องใช้รหัส</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span className="text-xs font-semibold">เฉพาะนักศึกษา / ทั่วไป</span>
+                    <GraduationCap className="w-4 h-4 text-sky-600" />
+                  </div>
+                  <div className="text-2xl font-extrabold text-sky-900">{studentLinksCount + bothLinksCount}</div>
+                  <div className="text-[11px] text-sky-600 font-semibold">นักศึกษา {studentLinksCount} · ทั้งสอง {bothLinksCount}</div>
+                </div>
+              </div>
+
+              {/* Chart */}
               <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
-                  <h3 className="font-bold text-slate-800">
-                    สรุปสถิติ 5 อันดับลิงก์ที่มีการคลิกเข้าชมมากที่สุด
-                  </h3>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
+                    <h3 className="font-bold text-slate-800">
+                      10 อันดับระบบที่มีการเข้าใช้งานมากที่สุด (Top Visited Systems)
+                    </h3>
+                  </div>
                 </div>
                 {topLinksData.length > 0 && topLinksData[0].clicks > 0 ? (
-                  <div className="h-[300px] w-full">
+                  <div className="h-[280px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topLinksData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <BarChart data={topLinksData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
                         <XAxis type="number" />
-                        <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
+                        <YAxis dataKey="name" type="category" width={160} tick={{ fontSize: 11 }} />
                         <Tooltip 
                           formatter={(value) => [`${value} ครั้ง`, "จำนวนคลิก"]}
                           labelFormatter={(label, payload) => {
@@ -1241,7 +1542,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             return label;
                           }}
                         />
-                        <Bar dataKey="clicks" fill="#5c0620" radius={[0, 4, 4, 0]} barSize={30} />
+                        <Bar dataKey="clicks" fill="#5c0620" radius={[0, 6, 6, 0]} barSize={20} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1250,6 +1551,136 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     ยังไม่มีข้อมูลสถิติการคลิก หรือข้อมูลไม่เพียงพอ
                   </div>
                 )}
+              </div>
+
+              {/* Real-time Usage Table for ALL Links */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
+                    <div>
+                      <h3 className="font-bold text-slate-800">
+                        ตารางสถิติการเข้าใช้งานทุกลิงก์ (Real-time Live Table)
+                      </h3>
+                      <p className="text-xs text-slate-500">เรียงตามยอดเข้าชมจากมากไปน้อย พร้อมระบุกลุ่มเป้าหมาย</p>
+                    </div>
+                  </div>
+                  
+                  {/* Search and Filters */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input 
+                      type="text"
+                      placeholder="ค้นหาระบบ..."
+                      value={dashboardSearch}
+                      onChange={(e) => setDashboardSearch(e.target.value)}
+                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20"
+                    />
+                    <select
+                      value={dashboardAudienceFilter}
+                      onChange={(e) => setDashboardAudienceFilter(e.target.value as any)}
+                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700"
+                    >
+                      <option value="all">ทุกลิงก์ ({links.length})</option>
+                      <option value="staff">เฉพาะบุคลากร ({staffLinksCount})</option>
+                      <option value="student">เฉพาะนักศึกษา ({studentLinksCount})</option>
+                      <option value="both">ทั้ง 2 กลุ่ม ({bothLinksCount})</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="p-3 w-12 text-center">#</th>
+                        <th className="p-3">ระบบ / ลิงก์</th>
+                        <th className="p-3 w-36">กลุ่มเป้าหมาย</th>
+                        <th className="p-3 w-40 text-right">ยอดเข้าชม (คลิก)</th>
+                        <th className="p-3 w-28 text-right">สัดส่วน (% Share)</th>
+                        <th className="p-3 w-20 text-center">เปิดดู</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {dashboardFilteredLinks.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-slate-400">
+                            ไม่พบข้อมูลลิงก์ที่ตรงกับเงื่อนไขค้นหา
+                          </td>
+                        </tr>
+                      ) : (
+                        dashboardFilteredLinks.map((link, idx) => {
+                          const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+                          const clickShare = totalClicks > 0 ? Math.round(((link.clickCount || 0) / totalClicks) * 100) : 0;
+                          return (
+                            <tr key={link.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="p-3 text-center font-bold text-slate-400">
+                                {idx < 3 ? (
+                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[11px] font-bold ${
+                                    idx === 0 ? "bg-amber-500 shadow-xs" : idx === 1 ? "bg-slate-400" : "bg-amber-700"
+                                  }`}>
+                                    {idx + 1}
+                                  </span>
+                                ) : (
+                                  idx + 1
+                                )}
+                              </td>
+                              <td className="p-3">
+                                <div className="font-semibold text-slate-800 line-clamp-1">{link.title}</div>
+                                <div className="text-[11px] text-slate-400 font-mono truncate max-w-xs">{link.url}</div>
+                              </td>
+                              <td className="p-3">
+                                {aud === 'staff' ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-full">
+                                    <Briefcase className="w-3 h-3 text-rose-600" />
+                                    เฉพาะบุคลากร
+                                  </span>
+                                ) : aud === 'student' ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-sky-50 text-sky-800 border border-sky-200 px-2 py-0.5 rounded-full">
+                                    <GraduationCap className="w-3 h-3 text-sky-600" />
+                                    เฉพาะนักศึกษา
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">
+                                    <Users className="w-3 h-3 text-slate-500" />
+                                    ทั้ง 2 กลุ่ม
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-right">
+                                <span className="font-mono font-bold text-slate-900 text-sm">
+                                  {(link.clickCount || 0).toLocaleString()}
+                                </span>
+                                <span className="text-slate-400 text-[11px] ml-1">ครั้ง</span>
+                              </td>
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div 
+                                      className="bg-[#5c0620] h-full rounded-full transition-all duration-300"
+                                      style={{ width: `${Math.min(100, Math.max(4, clickShare))}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="font-mono text-[11px] text-slate-500 w-8">{clickShare}%</span>
+                                </div>
+                              </td>
+                              <td className="p-3 text-center">
+                                <a
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 inline-flex text-slate-400 hover:text-[#5c0620] hover:bg-rose-50 rounded-lg transition-colors"
+                                  title="เปิดลิงก์"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -1281,18 +1712,63 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
 
                   <div className="space-y-1.5 col-span-1">
-                    <label className="text-xs font-semibold text-slate-600 block">สิทธิ์การเข้าถึง / ปักหมุด</label>
-                    <div className="flex flex-col gap-2 mt-2">
-                      <label className="flex items-center gap-2 cursor-pointer p-2 border border-slate-200 rounded-xl hover:bg-slate-50 w-full transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={linkIsStaffOnly}
-                          onChange={(e) => setLinkIsStaffOnly(e.target.checked)}
-                          className="w-4 h-4 text-[#5c0620] bg-slate-100 border-slate-300 rounded focus:ring-[#5c0620]"
-                        />
-                        <span className="text-sm font-medium text-slate-700">แสดงเฉพาะบุคลากร (ซ่อนจากนักศึกษา)</span>
-                      </label>
-                      
+                    <label className="text-xs font-semibold text-slate-600 block">
+                      กลุ่มเป้าหมายการแสดงผล (Target Audience) <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLinkTargetAudience('both');
+                          setLinkIsStaffOnly(false);
+                        }}
+                        className={`p-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
+                          linkTargetAudience === 'both'
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>ทั้ง 2 กลุ่ม</span>
+                        <span className={`text-[9px] ${linkTargetAudience === 'both' ? 'text-slate-300' : 'text-slate-400'}`}>นักศึกษา & บุคลากร</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLinkTargetAudience('student');
+                          setLinkIsStaffOnly(false);
+                        }}
+                        className={`p-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
+                          linkTargetAudience === 'student'
+                            ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        <span>แค่นักศึกษา</span>
+                        <span className={`text-[9px] ${linkTargetAudience === 'student' ? 'text-sky-100' : 'text-slate-400'}`}>ซ่อนจากบุคลากร</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLinkTargetAudience('staff');
+                          setLinkIsStaffOnly(true);
+                        }}
+                        className={`p-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
+                          linkTargetAudience === 'staff'
+                            ? 'bg-[#5c0620] text-white border-[#5c0620] shadow-xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Briefcase className="w-3.5 h-3.5" />
+                        <span>แค่บุคลากร</span>
+                        <span className={`text-[9px] ${linkTargetAudience === 'staff' ? 'text-rose-200' : 'text-slate-400'}`}>ซ่อนจากนักศึกษา</span>
+                      </button>
+                    </div>
+
+                    <div className="pt-1.5">
                       <label className="flex items-center gap-2 cursor-pointer p-2 border border-slate-200 rounded-xl hover:bg-slate-50 w-full transition-colors">
                         <input
                           type="checkbox"
@@ -1300,7 +1776,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           onChange={(e) => setLinkIsPinned(e.target.checked)}
                           className="w-4 h-4 text-[#5c0620] bg-slate-100 border-slate-300 rounded focus:ring-[#5c0620]"
                         />
-                        <span className="text-sm font-medium text-slate-700 flex items-center gap-1">
+                        <span className="text-xs font-medium text-slate-700 flex items-center gap-1">
                           <Pin className="w-3.5 h-3.5 text-rose-500" />
                           ปักหมุดไว้บนสุด (Pin to Top)
                         </span>
@@ -1455,6 +1931,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           setLinkUrl("");
                           setLinkDesc("");
                           setLinkIsStaffOnly(false);
+                          setLinkTargetAudience('both');
                           setLinkThumbnailUrl("");
                         }}
                         className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all"
@@ -1501,6 +1978,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   ) : (
                     <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
                       {links.map((link) => {
+                        const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
                         return (
                           <div key={link.id} className="p-4 flex items-start justify-between gap-4 hover:bg-slate-50/50 transition-colors">
                             <div className="min-w-0 flex-1 flex gap-3">
@@ -1516,11 +1994,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                                   <span className="font-semibold text-slate-800 text-sm truncate max-w-[250px]">{link.title}</span>
-                                  {link.isStaffOnly && (
-                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-white bg-slate-800 rounded-full border border-slate-900">
-                                      บุคลากรเท่านั้น
+                                  {aud === 'staff' ? (
+                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-white bg-[#5c0620] rounded-full inline-flex items-center gap-1">
+                                      <Briefcase className="w-2.5 h-2.5" />
+                                      เฉพาะบุคลากร
+                                    </span>
+                                  ) : aud === 'student' ? (
+                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-white bg-sky-600 rounded-full inline-flex items-center gap-1">
+                                      <GraduationCap className="w-2.5 h-2.5" />
+                                      เฉพาะนักศึกษา
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-slate-700 bg-slate-200 rounded-full inline-flex items-center gap-1">
+                                      <Users className="w-2.5 h-2.5" />
+                                      ทั้ง 2 กลุ่ม
                                     </span>
                                   )}
+                                  <span className="text-[10px] text-slate-500 font-mono">
+                                    ({link.clickCount || 0} คลิก)
+                                  </span>
                                 </div>
                                 <p className="text-xs text-slate-400 font-mono truncate mb-1">{link.url}</p>
                                 {link.description && (
@@ -1567,6 +2059,275 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: STAFF PASSWORD MANAGEMENT */}
+          {activeTab === "staff" && (
+            <div className="space-y-6">
+              {/* Header Box */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-[#5c0620] text-white rounded-2xl shadow-xs">
+                    <Key className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-base">
+                      จัดการรหัสผ่านบุคลากร (Staff Passwords Management)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      แอดมินสามารถสร้างรหัสผ่านเพื่อแจกจ่ายให้อาจารย์และเจ้าหน้าที่ใช้ปลดล็อกดูลิงก์ "เฉพาะบุคลากร" ได้ทันที
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-rose-50/60 rounded-xl border border-rose-100 text-xs text-rose-900 leading-relaxed space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <Info className="w-4 h-4 text-[#5c0620] shrink-0" />
+                    <span>คำแนะนำการใช้งาน:</span>
+                  </div>
+                  <p>
+                    เมื่อผู้ใช้งานเข้ามาที่หน้าเว็บหลักและคลิกแท็บ <strong>"บุคลากร"</strong> ระบบจะถามหารหัสผ่านนี้ หากกรอกถูกต้องระบบจะแสดงเฉพาะลิงก์ที่บุคลากรมีสิทธิ์เข้าถึง (ลิงก์ทั่วไป + ลิงก์เฉพาะบุคลากร) และจะซ่อนลิงก์เฉพาะนักศึกษาโดยอัตโนมัติ
+                  </p>
+                </div>
+              </div>
+
+              {/* Form to Add New Staff Passcode */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
+                  <h4 className="font-bold text-slate-800 text-sm">
+                    สร้างรหัสผ่านใหม่สำหรับบุคลากร (Add Staff Passcode)
+                  </h4>
+                </div>
+
+                <form onSubmit={handleAddStaffPassword} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600 block">
+                        รหัสผ่านที่ต้องการ (Passcode) <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          required
+                          placeholder="เช่น STAFF-2024 หรือ SCI-9999"
+                          value={newStaffPassword}
+                          onChange={(e) => setNewStaffPassword(e.target.value)}
+                          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleGenerateRandomStaffCode}
+                          className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                          title="สุ่มรหัสผ่านอัตโนมัติ"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                          <span>สุ่มรหัส</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600 block">
+                        หมายเหตุ / ป้ายกำกับ (Label / Note - ระบุหรือไม่ก็ได้)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="เช่น อาจารย์สาขาวิทยาการคอมฯ, เจ้าหน้าที่สายสนับสนุน"
+                        value={newStaffPasswordLabel}
+                        onChange={(e) => setNewStaffPasswordLabel(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !newStaffPassword.trim()}
+                      className="px-5 py-2.5 bg-[#5c0620] hover:bg-rose-950 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-[#5c0620]/15 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isSubmitting ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
+                      <span>บันทึกและเปิดใช้งานรหัสนี้</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* List of Active Staff Passwords */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
+                    <h4 className="font-bold text-slate-800 text-sm">
+                      รายการรหัสผ่านบุคลากรที่ใช้งานได้ ({staffPasswordItems.length} รหัส)
+                    </h4>
+                  </div>
+                </div>
+
+                {staffPasswordItems.length === 0 ? (
+                  <div className="py-10 text-center text-slate-400 space-y-2">
+                    <Key className="w-8 h-8 mx-auto opacity-30 text-rose-800" />
+                    <p className="text-sm">ยังไม่มีรหัสผ่านบุคลากรในระบบ</p>
+                    <p className="text-xs text-slate-400">กรุณาสร้างรหัสผ่านในแบบฟอร์มด้านบนเพื่อให้บุคลากรใช้เข้าดูลิงก์เฉพาะบุคลากรได้</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 overflow-hidden">
+                    {staffPasswordItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="font-mono text-base font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
+                              {item.code}
+                            </span>
+                            {item.label && (
+                              <span className="text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                                {item.label}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400 flex items-center gap-2">
+                            <span>สร้างเมื่อ: {item.createdAt ? new Date(item.createdAt).toLocaleString('th-TH') : "ไม่ระบุ"}</span>
+                            {item.createdBy && <span>· โดย {item.createdBy}</span>}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCode(item.id, item.code)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                              copiedCodeId === item.id
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                            }`}
+                          >
+                            {copiedCodeId === item.id ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>คัดลอกแล้ว</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                <span>คัดลอกรหัส</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveStaffPassword(item.code)}
+                            disabled={isSubmitting}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors cursor-pointer"
+                            title="ลบรหัสนี้"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Individual Staff Accounts Form */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-sm">
+                      เพิ่มบัญชีบุคลากรแบบระบุชื่อผู้ใช้ (Individual Staff Account)
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      สำหรับให้อาจารย์/บุคลากรล็อกอินด้วย Username และ Password ของตนเอง
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleAddStaffAccount} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600 block">
+                        ชื่อผู้ใช้งาน (Staff Username) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="เช่น somchai.p หรือ staff_fst"
+                        value={newStaffUsername}
+                        onChange={(e) => setNewStaffUsername(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600 block">
+                        รหัสผ่าน (Staff Password) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="รหัสผ่านเข้าใช้งาน"
+                        value={newStaffAccountPassword}
+                        onChange={(e) => setNewStaffAccountPassword(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !newStaffUsername.trim() || !newStaffAccountPassword.trim()}
+                      className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmitting ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
+                      <span>เพิ่มบัญชีบุคลากร</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* List of Staff Accounts */}
+                {adminUsers.filter(u => u.role === "staff").length > 0 && (
+                  <div className="pt-2 space-y-2">
+                    <div className="text-xs font-bold text-slate-600">บัญชีบุคลากรในระบบ:</div>
+                    <div className="rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+                      {adminUsers.filter(u => u.role === "staff").map((staffUser, idx) => (
+                        <div key={idx} className="p-3 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="w-3.5 h-3.5 text-[#5c0620]" />
+                            <span className="font-semibold text-slate-800">{staffUser.username}</span>
+                            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
+                              รหัส: {(staffUser as any).password || "••••••••"}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAdmin(staffUser.username)}
+                            className="p-1 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
+                            title="ลบบัญชีนี้"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
