@@ -30,6 +30,19 @@
     
     <script>
       (function() {
+        try {
+          var saved = localStorage.getItem('scitech_theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (saved === 'dark' || (!saved && prefersDark)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      (function() {
         if (typeof window === 'undefined') return;
 
         if (typeof window.reportError !== 'function') {

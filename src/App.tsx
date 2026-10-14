@@ -28,7 +28,9 @@ import {
   Check,
   ArrowUp,
   Pin,
-  Briefcase
+  Briefcase,
+  Sun,
+  Moon
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { hashStaffCode, parseStaffCodeHashes } from "./staffCodes";
@@ -45,6 +47,33 @@ export default function App() {
   const [layoutMode, setLayoutMode] = useState<"grid" | "list" | "compact">("grid");
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Dark / Light Theme State
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    try {
+      const saved = localStorage.getItem("scitech_theme");
+      if (saved === "dark" || saved === "light") return saved;
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    try {
+      localStorage.setItem("scitech_theme", theme);
+    } catch {}
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => (prev === "dark" ? "light" : "dark"));
+  }, []);
 
   // Admin States
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -842,36 +871,36 @@ export default function App() {
   }, [filteredLinks, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-[#f3f0ef] text-[#1f1a1c] flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] relative overflow-x-clip">
+    <div className="min-h-screen bg-[#f3f0ef] dark:bg-[#121113] text-[#1f1a1c] dark:text-[#f3f0ef] flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] dark:selection:bg-rose-500/30 dark:selection:text-rose-200 relative overflow-x-clip transition-colors duration-200">
 
       {adminConfig.isAnnouncementActive && adminConfig.announcementText && (
-        <div className="relative z-20 bg-[#3a0210] text-white px-4 py-2.5 text-center text-sm font-medium">
+        <div className="relative z-20 bg-[#3a0210] dark:bg-[#20040b] text-white px-4 py-2.5 text-center text-sm font-medium border-b border-rose-900/30">
           {adminConfig.announcementText}
         </div>
       )}
 
       <main className="max-w-6xl mx-auto w-full px-4 md:px-6 pt-4 md:pt-7 pb-10 flex-1 flex flex-col gap-3 md:gap-4 relative z-10">
 
-        {/* Top bar: brand, audience switch, admin */}
+        {/* Top bar: brand, audience switch, theme toggle & admin */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2.5 font-bold text-[16px] md:text-[17px]">
             {adminConfig.siteLogoUrl ? (
-              <img src={adminConfig.siteLogoUrl} alt="" className="w-9 h-9 rounded-full object-contain bg-white" />
+              <img src={adminConfig.siteLogoUrl} alt="" className="w-9 h-9 rounded-full object-contain bg-white dark:bg-[#252125]" />
             ) : (
               <span className="w-9 h-9 rounded-full bg-[#5c0620] flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-white" aria-hidden="true" />
               </span>
             )}
-            <span>{adminConfig.siteTitle || "FST Link Hub"}</span>
+            <span className="text-[#1f1a1c] dark:text-white">{adminConfig.siteTitle || "FST Link Hub"}</span>
           </div>
 
           <div className="flex items-center gap-2 order-3 w-full sm:order-none sm:w-auto">
-            <div role="group" aria-label="กลุ่มผู้ใช้" className="grid grid-cols-2 gap-1 bg-white rounded-full p-1 w-full sm:w-auto">
+            <div role="group" aria-label="กลุ่มผู้ใช้" className="grid grid-cols-2 gap-1 bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-full p-1 w-full sm:w-auto shadow-xs">
               <button
                 type="button"
                 aria-pressed={viewMode === "student"}
                 onClick={() => setViewMode("student")}
-                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer ${viewMode === "student" ? "bg-[#1f1a1c] text-white" : "text-[#4a4245] hover:bg-[#f3f0ef]"}`}
+                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer ${viewMode === "student" ? "bg-[#1f1a1c] dark:bg-white text-white dark:text-[#1f1a1c]" : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"}`}
               >
                 นักศึกษา
               </button>
@@ -879,7 +908,7 @@ export default function App() {
                 type="button"
                 aria-pressed={viewMode === "staff"}
                 onClick={handleStaffTabClick}
-                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "staff" ? "bg-[#5c0620] text-white" : "text-[#4a4245] hover:bg-[#f3f0ef]"}`}
+                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "staff" ? "bg-[#5c0620] text-white" : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"}`}
               >
                 {viewMode !== "staff" && <Lock className="w-3.5 h-3.5" aria-hidden="true" />}
                 <span>บุคลากร</span>
@@ -887,41 +916,58 @@ export default function App() {
             </div>
           </div>
 
-          {isAdmin ? (
-            <div className="flex items-center gap-1 bg-white rounded-full p-1">
-              <button type="button" onClick={() => setShowAdminPanel(true)} className="flex items-center gap-1.5 px-4 min-h-10 rounded-full text-sm font-semibold text-[#5c0620] hover:bg-[#f3f0ef] cursor-pointer">
-                <Settings className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">จัดการข้อมูล</span>
-              </button>
-              <button type="button" onClick={handleLogout} aria-label="ออกจากระบบแอดมิน" title="ออกจากระบบแอดมิน" className="w-10 h-10 rounded-full flex items-center justify-center text-[#4a4245] hover:bg-[#f3f0ef] cursor-pointer">
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <button type="button" onClick={() => setShowAdminModal(true)} aria-label="เข้าสู่ระบบผู้ดูแล" title="เข้าสู่ระบบผู้ดูแล" className="w-11 h-11 rounded-full bg-white flex items-center justify-center text-[#1f1a1c] hover:text-[#5c0620] cursor-pointer">
-              <Settings className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            {/* Dark / Light Mode Toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "เปลี่ยนเป็นโหมดสว่าง" : "เปลี่ยนเป็นโหมดมืด"}
+              title={theme === "dark" ? "เปลี่ยนเป็นโหมดสว่าง (Light Mode)" : "เปลี่ยนเป็นโหมดมืด (Dark Mode)"}
+              className="w-11 h-11 rounded-full bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 flex items-center justify-center text-[#4a4245] dark:text-amber-400 hover:text-[#5c0620] dark:hover:text-amber-300 shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95"
+            >
+              {theme === "dark" ? (
+                <Sun className="w-5 h-5 transition-transform" />
+              ) : (
+                <Moon className="w-5 h-5 transition-transform" />
+              )}
             </button>
-          )}
+
+            {isAdmin ? (
+              <div className="flex items-center gap-1 bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-full p-1 shadow-xs">
+                <button type="button" onClick={() => setShowAdminPanel(true)} className="flex items-center gap-1.5 px-4 min-h-10 rounded-full text-sm font-semibold text-[#5c0620] dark:text-rose-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c] cursor-pointer">
+                  <Settings className="w-4 h-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">จัดการข้อมูล</span>
+                </button>
+                <button type="button" onClick={handleLogout} aria-label="ออกจากระบบแอดมิน" title="ออกจากระบบแอดมิน" className="w-10 h-10 rounded-full flex items-center justify-center text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c] cursor-pointer">
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowAdminModal(true)} aria-label="เข้าสู่ระบบผู้ดูแล" title="เข้าสู่ระบบผู้ดูแล" className="w-11 h-11 rounded-full bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 flex items-center justify-center text-[#1f1a1c] dark:text-slate-200 hover:text-[#5c0620] dark:hover:text-rose-400 shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95">
+                <Settings className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Staff Mode Status Banner */}
         {viewMode === "staff" && (
-          <div className="bg-white rounded-2xl p-3.5 md:px-5 md:py-3.5 border border-[#5c0620]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="bg-white dark:bg-[#1e1b1e] rounded-2xl p-3.5 md:px-5 md:py-3.5 border border-[#5c0620]/20 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-3">
               <span className="w-10 h-10 rounded-xl bg-[#5c0620] text-white flex items-center justify-center shrink-0 shadow-xs">
                 <Briefcase className="w-5 h-5" />
               </span>
               <div>
-                <div className="font-bold text-sm md:text-[15px] text-slate-800 flex items-center gap-2 flex-wrap">
-                  <span className="text-slate-500 font-normal">เข้าสู่ระบบในชื่อ:</span>
-                  <span className="text-[#5c0620] bg-rose-50 border border-rose-200/80 px-2.5 py-0.5 rounded-lg font-bold">
+                <div className="font-bold text-sm md:text-[15px] text-slate-800 dark:text-white flex items-center gap-2 flex-wrap">
+                  <span className="text-slate-500 dark:text-slate-400 font-normal">เข้าสู่ระบบในชื่อ:</span>
+                  <span className="text-[#5c0620] dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-800/40 px-2.5 py-0.5 rounded-lg font-bold">
                     {isAdmin ? (currentUser?.username || "ผู้ดูแลระบบ") : (staffAccountName || "บุคลากร")}
                   </span>
-                  <span className="text-[11px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                  <span className="text-[11px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md">
                     โหมดบุคลากร (Staff Portal)
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   แสดงเฉพาะระบบสำหรับบุคลากรและระบบทั่วไป (ซ่อนระบบเฉพาะนักศึกษาอัตโนมัติ) · {filteredLinks.length} รายการที่ตรงกับสิทธิ์
                 </p>
               </div>
@@ -931,7 +977,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleStaffLogout}
-                className="px-3.5 py-2 text-xs text-slate-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 font-semibold self-stretch sm:self-auto justify-center"
+                className="px-3.5 py-2 text-xs text-slate-600 dark:text-slate-300 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-white/10 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 font-semibold self-stretch sm:self-auto justify-center"
                 title="ออกจากโหมดบุคลากร"
               >
                 <Lock className="w-3.5 h-3.5" />
@@ -944,24 +990,24 @@ export default function App() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 grid-flow-dense">
 
           {/* Hero: greeting + search */}
-          <div className="col-span-2 bg-[#5c0620] text-white rounded-[24px] md:rounded-[28px] p-5 md:p-8 flex flex-col justify-between gap-5 md:gap-7 min-h-[200px] md:min-h-[260px]">
+          <div className="col-span-2 bg-[#5c0620] dark:bg-[#480518] text-white rounded-[24px] md:rounded-[28px] p-5 md:p-8 flex flex-col justify-between gap-5 md:gap-7 min-h-[200px] md:min-h-[260px] shadow-sm">
             <div>
-              <div className="text-[13px] md:text-[14px] text-[#f6d9e0]">คณะวิทยาศาสตร์และเทคโนโลยี</div>
+              <div className="text-[13px] md:text-[14px] text-[#f6d9e0] dark:text-rose-200/80">คณะวิทยาศาสตร์และเทคโนโลยี</div>
               <h1 className="mt-1 text-[26px] md:text-[38px] leading-tight font-bold">วันนี้ต้องใช้ระบบไหน?</h1>
             </div>
             <div className="relative">
               <label htmlFor="link-search" className="sr-only">ค้นหาลิงก์</label>
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5c0620] pointer-events-none" aria-hidden="true" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5c0620] dark:text-rose-400 pointer-events-none" aria-hidden="true" />
               <input
                 id="link-search"
                 type="search"
                 placeholder="พิมพ์ชื่อระบบ เช่น เกรด, คำร้อง, Wi‑Fi"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-12 min-h-[52px] md:min-h-14 bg-white text-[#1f1a1c] placeholder-[#7a7074] rounded-2xl text-[16px] focus:outline-none focus:ring-4 focus:ring-white/40"
+                className="w-full pl-12 pr-12 min-h-[52px] md:min-h-14 bg-white dark:bg-[#1a1418] text-[#1f1a1c] dark:text-white placeholder-[#7a7074] dark:placeholder-slate-400 border border-transparent dark:border-white/10 rounded-2xl text-[16px] focus:outline-none focus:ring-4 focus:ring-white/40"
               />
               {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery("")} aria-label="ล้างคำค้นหา" className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#5e5558] hover:text-[#1f1a1c] cursor-pointer">
+                <button type="button" onClick={() => setSearchQuery("")} aria-label="ล้างคำค้นหา" className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#5e5558] dark:text-slate-400 hover:text-[#1f1a1c] dark:hover:text-white cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               )}
@@ -969,22 +1015,22 @@ export default function App() {
           </div>
 
           {/* My pins: saved per browser, so each visitor has their own */}
-          <section aria-labelledby="my-pins-title" className="col-span-2 bg-white rounded-[24px] md:rounded-[28px] p-4 md:p-6 flex flex-col gap-3">
+          <section aria-labelledby="my-pins-title" className="col-span-2 bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-[24px] md:rounded-[28px] p-4 md:p-6 flex flex-col gap-3 shadow-xs">
             <div className="flex items-center justify-between gap-2">
-              <h2 id="my-pins-title" className="text-[15px] md:text-[16px] font-bold flex items-center gap-2">
-                <Pin className="w-4 h-4 text-[#5c0620]" aria-hidden="true" />
+              <h2 id="my-pins-title" className="text-[15px] md:text-[16px] font-bold flex items-center gap-2 text-[#1f1a1c] dark:text-white">
+                <Pin className="w-4 h-4 text-[#5c0620] dark:text-rose-400" aria-hidden="true" />
                 หมุดของฉัน
               </h2>
-              {myPinnedLinks.length > 0 && <span className="text-[13px] text-[#5e5558]">{myPinnedLinks.length} รายการ</span>}
+              {myPinnedLinks.length > 0 && <span className="text-[13px] text-[#5e5558] dark:text-slate-400">{myPinnedLinks.length} รายการ</span>}
             </div>
             {myPinnedLinks.length === 0 ? (
-              <p className="text-[14px] text-[#5e5558] leading-relaxed">
-                กดปุ่ม <Pin className="inline w-4 h-4 align-[-2px] text-[#5c0620]" aria-label="หมุด" /> บนการ์ดเว็บที่ใช้บ่อย แล้วเว็บนั้นจะมาอยู่ตรงนี้ หมุดเก็บไว้ในเครื่องของคุณเอง คนอื่นไม่เห็น
+              <p className="text-[14px] text-[#5e5558] dark:text-slate-400 leading-relaxed">
+                กดปุ่ม <Pin className="inline w-4 h-4 align-[-2px] text-[#5c0620] dark:text-rose-400" aria-label="หมุด" /> บนการ์ดเว็บที่ใช้บ่อย แล้วเว็บนั้นจะมาอยู่ตรงนี้ หมุดเก็บไว้ในเครื่องของคุณเอง คนอื่นไม่เห็น
               </p>
             ) : (
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {myPinnedLinks.map((link) => (
-                  <li key={link.id} className="relative flex items-center gap-3 rounded-2xl bg-[#f3f0ef] pl-2 pr-1 py-1.5 hover:bg-[#ebe6e4] transition-colors">
+                  <li key={link.id} className="relative flex items-center gap-3 rounded-2xl bg-[#f3f0ef] dark:bg-[#292429] pl-2 pr-1 py-1.5 hover:bg-[#ebe6e4] dark:hover:bg-[#342e34] transition-colors">
                     {link.thumbnailUrl ? (
                       <img src={link.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-10 h-10 rounded-xl object-cover shrink-0" />
                     ) : (
@@ -995,11 +1041,11 @@ export default function App() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => handleIncrementClick(link.id)}
-                      className="flex-1 min-w-0 text-[14px] font-semibold text-[#1f1a1c] truncate after:absolute after:inset-0 after:content-['']"
+                      className="flex-1 min-w-0 text-[14px] font-semibold text-[#1f1a1c] dark:text-slate-100 truncate after:absolute after:inset-0 after:content-['']"
                     >
                       {link.title}
                     </a>
-                    <button type="button" onClick={() => toggleMyPin(link.id)} aria-label={`เอา ${link.title} ออกจากหมุดของฉัน`} title="เอาออก" className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-[#5e5558] hover:text-[#5c0620] hover:bg-white cursor-pointer shrink-0">
+                    <button type="button" onClick={() => toggleMyPin(link.id)} aria-label={`เอา ${link.title} ออกจากหมุดของฉัน`} title="เอาออก" className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-[#5e5558] dark:text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-white dark:hover:bg-[#1e1b1e] cursor-pointer shrink-0">
                       <X className="w-4 h-4" />
                     </button>
                   </li>
@@ -1009,23 +1055,23 @@ export default function App() {
           </section>
 
           {searchQuery && (
-            <p className="col-span-2 lg:col-span-4 text-[14px] text-[#4a4245] px-1 pt-2" aria-live="polite">
-              ผลการค้นหา “<strong className="text-[#5c0620]">{searchQuery}</strong>” {filteredLinks.length} รายการ
+            <p className="col-span-2 lg:col-span-4 text-[14px] text-[#4a4245] dark:text-slate-300 px-1 pt-2" aria-live="polite">
+              ผลการค้นหา “<strong className="text-[#5c0620] dark:text-rose-400">{searchQuery}</strong>” {filteredLinks.length} รายการ
             </p>
           )}
 
           {loading ? (
-            <div className="col-span-2 lg:col-span-4 py-20 text-center bg-white rounded-[28px]">
-              <Loader2 className="w-9 h-9 animate-spin text-[#5c0620] mx-auto" />
-              <p className="mt-3 text-sm text-[#5e5558]">กำลังโหลดลิงก์...</p>
+            <div className="col-span-2 lg:col-span-4 py-20 text-center bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-[28px]">
+              <Loader2 className="w-9 h-9 animate-spin text-[#5c0620] dark:text-rose-400 mx-auto" />
+              <p className="mt-3 text-sm text-[#5e5558] dark:text-slate-400">กำลังโหลดลิงก์...</p>
             </div>
           ) : filteredLinks.length === 0 ? (
-            <div className="col-span-2 lg:col-span-4 py-16 px-6 text-center bg-white rounded-[28px] space-y-3">
-              <Globe className="w-11 h-11 text-[#c9c1c4] mx-auto" aria-hidden="true" />
-              <h2 className="font-bold text-[17px]">ไม่พบลิงก์ที่ตรงกับคำค้นหา</h2>
-              <p className="text-[14px] text-[#5e5558]">ลองใช้คำอื่น หรือดูลิงก์ทั้งหมด</p>
+            <div className="col-span-2 lg:col-span-4 py-16 px-6 text-center bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-[28px] space-y-3">
+              <Globe className="w-11 h-11 text-[#c9c1c4] dark:text-slate-600 mx-auto" aria-hidden="true" />
+              <h2 className="font-bold text-[17px] text-[#1f1a1c] dark:text-white">ไม่พบลิงก์ที่ตรงกับคำค้นหา</h2>
+              <p className="text-[14px] text-[#5e5558] dark:text-slate-400">ลองใช้คำอื่น หรือดูลิงก์ทั้งหมด</p>
               {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery("")} className="text-sm font-semibold bg-[#1f1a1c] text-white px-5 min-h-11 rounded-full cursor-pointer">
+                <button type="button" onClick={() => setSearchQuery("")} className="text-sm font-semibold bg-[#1f1a1c] dark:bg-white text-white dark:text-[#1f1a1c] px-5 min-h-11 rounded-full cursor-pointer hover:opacity-90">
                   ดูลิงก์ทั้งหมด
                 </button>
               )}
@@ -1051,30 +1097,30 @@ export default function App() {
       </main>
 
       {/* 3. APP FOOTER */}
-      <footer className="bg-white text-slate-600 mt-6 md:mt-10 border-t border-[#e4dfdd] relative z-10">
+      <footer className="bg-white dark:bg-[#161416] text-slate-600 dark:text-slate-400 mt-6 md:mt-10 border-t border-[#e4dfdd] dark:border-white/10 relative z-10 transition-colors">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           
           {/* Col 1: About Faculty */}
           <div className="space-y-3.5">
-            <div className="flex items-center gap-2.5 text-slate-800">
-              <GraduationCap className="w-6 h-6 text-[#5c0620]" />
+            <div className="flex items-center gap-2.5 text-slate-800 dark:text-white">
+              <GraduationCap className="w-6 h-6 text-[#5c0620] dark:text-rose-400" />
               <span className="font-extrabold text-base tracking-tight">คณะวิทยาศาสตร์และเทคโนโลยี</span>
             </div>
-            <p className="text-xs leading-relaxed font-medium text-slate-500">
+            <p className="text-xs leading-relaxed font-medium text-slate-500 dark:text-slate-400">
               มุ่งเน้นการสร้างสรรค์องค์ความรู้ งานวิจัย และพัฒนากำลังคนด้านวิทยาศาสตร์ ไอที และเทคโนโลยี เพื่อการพัฒนาสังคมและเศรษฐกิจที่ยั่งยืน
             </p>
           </div>
 
           {/* Col 2: Contact Info */}
           <div className="space-y-3.5">
-            <h4 className="text-slate-800 font-bold text-sm tracking-tight">ช่องทางการติดต่อคณะ</h4>
-            <ul className="text-xs space-y-3 font-medium text-slate-500">
+            <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight">ช่องทางการติดต่อคณะ</h4>
+            <ul className="text-xs space-y-3 font-medium text-slate-500 dark:text-slate-400">
               <li className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#5c0620] shrink-0" />
+                <MapPin className="w-4 h-4 text-[#5c0620] dark:text-rose-400 shrink-0" />
                 <span>อาคารคณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยฟัตตอนี</span>
               </li>
               <li className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#5c0620] shrink-0" />
+                <Mail className="w-4 h-4 text-[#5c0620] dark:text-rose-400 shrink-0" />
                 <span>scitech@ftu.ac.th</span>
               </li>
             </ul>
@@ -1082,8 +1128,8 @@ export default function App() {
 
           {/* Col 3: Disclaimer & System info */}
           <div className="space-y-3.5">
-            <h4 className="text-slate-800 font-bold text-sm tracking-tight">ผู้ดูแลระบบและจัดการข้อมูล</h4>
-            <p className="text-xs leading-relaxed font-medium text-slate-500 mb-4">
+            <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight">ผู้ดูแลระบบและจัดการข้อมูล</h4>
+            <p className="text-xs leading-relaxed font-medium text-slate-500 dark:text-slate-400 mb-4">
               เข้าสู่ระบบหลังบ้านเพื่อจัดการพอร์ทัลลิงก์ สำหรับเจ้าหน้าที่และบุคลากร
             </p>
             {isAdmin ? (
@@ -1097,7 +1143,7 @@ export default function App() {
             ) : (
               <button
                 onClick={() => setShowAdminModal(true)}
-                className="text-xs bg-white hover:bg-slate-50 hover:text-slate-900 border border-slate-200 shadow-sm text-slate-600 font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+                className="text-xs bg-white dark:bg-[#252125] hover:bg-slate-50 dark:hover:bg-[#302a30] hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 shadow-sm text-slate-600 dark:text-slate-300 font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
               >
                 เข้าสู่หลังบ้านแอดมิน
               </button>
@@ -1106,8 +1152,8 @@ export default function App() {
         </div>
 
         {/* Bottom Credits Line */}
-        <div className="border-t border-white/60 bg-white/20 py-4">
-          <div className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between text-[10px] sm:text-xs text-slate-500 font-medium">
+        <div className="border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-black/20 py-4">
+          <div className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">
             <p>&copy; {new Date().getFullYear()} Faculty of Science and Technology. All Rights Reserved.</p>
             <p className="mt-1 md:mt-0">Designed & Developed by FST IT Team</p>
           </div>
@@ -1123,7 +1169,7 @@ export default function App() {
             exit={{ opacity: 0, scale: 0.8, y: 15 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
             onClick={scrollToTop}
-            className="fixed bottom-6 right-6 z-40 p-3.5 bg-white/90 hover:bg-white text-[#5c0620] hover:text-[#3a0210] rounded-2xl shadow-[0_8px_30px_rgba(92,6,32,0.15)] border border-white/80 hover:border-rose-200 backdrop-blur-xl transition-all cursor-pointer group hover:scale-105 active:scale-95"
+            className="fixed bottom-6 right-6 z-40 p-3.5 bg-white/90 dark:bg-[#252125]/90 hover:bg-white dark:hover:bg-[#2e292e] text-[#5c0620] dark:text-rose-400 hover:text-[#3a0210] dark:hover:text-rose-300 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white/80 dark:border-white/10 backdrop-blur-xl transition-all cursor-pointer group hover:scale-105 active:scale-95"
             title="เลื่อนขึ้นด้านบนสุด"
             aria-label="Scroll to top"
           >
@@ -1134,59 +1180,59 @@ export default function App() {
 
       {/* 4. MODAL: ADMIN LOGIN */}
       {showAdminModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white/80 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.1)] max-w-md w-full p-6 border border-white relative space-y-5">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white/95 dark:bg-[#1e1b1e] backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] max-w-md w-full p-6 border border-white dark:border-white/10 relative space-y-5">
             <button 
               onClick={() => setShowAdminModal(false)}
-              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-white text-[#5c0620] rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-white">
-                <Lock className="w-6 h-6 text-[#5c0620]" />
+              <div className="w-12 h-12 bg-white dark:bg-[#2a252a] text-[#5c0620] dark:text-rose-400 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-white dark:border-white/10">
+                <Lock className="w-6 h-6 text-[#5c0620] dark:text-rose-400" />
               </div>
-              <h3 className="text-lg font-bold text-slate-800">เข้าสู่ระบบ (Admin Login)</h3>
-              <p className="text-xs text-slate-500">กรุณาเข้าสู่ระบบเพื่อจัดการพอร์ทัลลิงก์</p>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">เข้าสู่ระบบ (Admin Login)</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">กรุณาเข้าสู่ระบบเพื่อจัดการพอร์ทัลลิงก์</p>
             </div>
 
             {/* Info notice about default password */}
-            <div className="p-3 bg-white/60 rounded-xl border border-white shadow-sm text-[11px] text-slate-600 flex gap-2">
-              <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#5c0620]" />
+            <div className="p-3 bg-white/60 dark:bg-white/5 rounded-xl border border-white dark:border-white/10 shadow-sm text-[11px] text-slate-600 dark:text-slate-300 flex gap-2">
+              <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#5c0620] dark:text-rose-400" />
               <div>
-                <strong>สำหรับเริ่มต้นใช้งาน:</strong> ผู้ดูแลระบบหลัก (Super Admin) ใช้ชื่อผู้ใช้ <code className="font-mono bg-white px-1 py-0.5 rounded-xs border border-slate-100 font-bold text-slate-800 shadow-sm">admin</code> และรหัสผ่าน <code className="font-mono bg-white px-1 py-0.5 rounded-xs border border-slate-100 font-bold text-slate-800 shadow-sm">admin1234</code>
+                <strong>สำหรับเริ่มต้นใช้งาน:</strong> ผู้ดูแลระบบหลัก (Super Admin) ใช้ชื่อผู้ใช้ <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin</code> และรหัสผ่าน <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin1234</code>
               </div>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">ชื่อผู้ใช้งาน (Username)</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">ชื่อผู้ใช้งาน (Username)</label>
                 <input
                   type="text"
                   required
                   placeholder="ป้อน Username"
                   value={loginUsername}
                   onChange={(e) => setLoginUsername(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-white shadow-inner bg-white/50 focus:bg-white focus:outline-hidden focus:ring-4 focus:ring-[#5c0620]/20 focus:border-[#5c0620]/40 text-sm transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 shadow-inner bg-white dark:bg-[#292429] focus:outline-hidden focus:ring-4 focus:ring-[#5c0620]/20 focus:border-[#5c0620]/40 text-sm text-slate-800 dark:text-white placeholder-slate-400 transition-all"
                   autoFocus
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">รหัสผ่าน (Password)</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">รหัสผ่าน (Password)</label>
                 <input
                   type="password"
                   required
                   placeholder="ป้อนรหัสผ่าน"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-white shadow-inner bg-white/50 focus:bg-white focus:outline-hidden focus:ring-4 focus:ring-[#5c0620]/20 focus:border-[#5c0620]/40 text-sm font-mono transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 shadow-inner bg-white dark:bg-[#292429] focus:outline-hidden focus:ring-4 focus:ring-[#5c0620]/20 focus:border-[#5c0620]/40 text-sm font-mono text-slate-800 dark:text-white placeholder-slate-400 transition-all"
                 />
               </div>
 
               {loginError && (
-                <p className="text-xs text-[#881337] font-semibold text-center flex items-center justify-center gap-1">
+                <p className="text-xs text-[#881337] dark:text-rose-400 font-semibold text-center flex items-center justify-center gap-1">
                   <ShieldAlert className="w-3.5 h-3.5" />
                   <span>{loginError}</span>
                 </p>
@@ -1196,7 +1242,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setShowAdminModal(false)}
-                  className="flex-1 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-white shadow-sm text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  className="flex-1 py-2.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
                   ยกเลิก
                 </button>
@@ -1224,14 +1270,14 @@ export default function App() {
 
       {/* STAFF ACCESS MODAL */}
       {showStaffModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white p-6 sm:p-8 rounded-3xl w-full max-w-sm shadow-xl border border-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#1e1b1e] p-6 sm:p-8 rounded-3xl w-full max-w-sm shadow-xl border border-white dark:border-white/10">
             <div className="flex flex-col items-center mb-6">
-              <div className="w-12 h-12 bg-rose-50 flex items-center justify-center rounded-2xl mb-4">
+              <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center rounded-2xl mb-4">
                 <ShieldAlert className="w-6 h-6 text-rose-500" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 text-center">เข้าใช้งานหมวดหมู่บุคลากร</h3>
-              <p className="text-xs text-slate-500 text-center mt-2 px-4">กรอกรหัสที่ได้รับจากแอดมินของคณะ</p>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white text-center">เข้าใช้งานหมวดหมู่บุคลากร</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2 px-4">กรอกรหัสที่ได้รับจากแอดมินของคณะ</p>
             </div>
             <form onSubmit={handleStaffLogin} className="space-y-4">
               <div>
@@ -1244,17 +1290,17 @@ export default function App() {
                   autoFocus
                   value={staffPasswordInput}
                   onChange={(e) => setStaffPasswordInput(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm bg-slate-50 focus:bg-white transition-all text-center tracking-widest font-mono"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm bg-slate-50 dark:bg-[#292429] text-slate-800 dark:text-white placeholder-slate-400 transition-all text-center tracking-widest font-mono"
                 />
               </div>
               {staffLoginError && (
-                <p className="text-rose-500 text-xs font-semibold text-center">{staffLoginError}</p>
+                <p className="text-rose-500 dark:text-rose-400 text-xs font-semibold text-center">{staffLoginError}</p>
               )}
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setShowStaffModal(false)}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  className="flex-1 py-2.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
                   ยกเลิก
                 </button>

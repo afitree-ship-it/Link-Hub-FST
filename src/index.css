@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Prompt:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Anuphan", "Prompt", system-ui, -apple-system, sans-serif;
 }
@@ -39,6 +41,28 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(92, 6, 32, 0.45);
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #141214;
+  color: #f3f0ef;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: rgba(24, 24, 27, 0.7);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(225, 29, 72, 0.35);
+  border: 2px solid rgba(24, 24, 27, 0.8);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(225, 29, 72, 0.55);
 }
 
 /* Smooth touch scrolling for iOS / Android */

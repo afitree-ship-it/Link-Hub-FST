@@ -1350,24 +1350,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   }, [links, dashboardAudienceFilter, dashboardSearch]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       {linkToDelete && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-bold text-slate-800 text-center">ยืนยันการลบ</h3>
-            <p className="text-sm text-slate-600 text-center">
-              คุณแน่ใจหรือไม่ที่จะลบลิงก์ <strong className="text-rose-600">"{linkToDelete.title}"</strong> ? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-[#1e1b1e] border border-white dark:border-white/10 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white text-center">ยืนยันการลบ</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 text-center">
+              คุณแน่ใจหรือไม่ที่จะลบลิงก์ <strong className="text-rose-600 dark:text-rose-400">"{linkToDelete.title}"</strong> ? การดำเนินการนี้ไม่สามารถย้อนกลับได้
             </p>
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setLinkToDelete(null)}
-                className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors"
+                className="flex-1 px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={executeDeleteLink}
-                className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl transition-colors"
+                className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 ยืนยันลบ
               </button>
@@ -1376,22 +1376,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       )}
 
-      <div className="bg-white/95 backdrop-blur-2xl border border-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.1)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white/95 dark:bg-[#181618] backdrop-blur-2xl border border-white dark:border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.25)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-white/50 flex items-center justify-between bg-white/50">
+        <div className="px-6 py-5 border-b border-white/50 dark:border-white/10 flex items-center justify-between bg-white/50 dark:bg-white/5">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[#5c0620] text-white rounded-2xl shadow-xs">
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-slate-800 text-lg">ระบบจัดการข้อมูลกลาง (Central Management)</h2>
-              <p className="text-xs text-slate-500">จัดการข้อมูลลิงก์ หมวดหมู่ และระบบความปลอดภัยของคณะฯ</p>
+              <h2 className="font-bold text-slate-800 dark:text-white text-lg">ระบบจัดการข้อมูลกลาง (Central Management)</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">จัดการข้อมูลลิงก์ หมวดหมู่ และระบบความปลอดภัยของคณะฯ</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1401,8 +1401,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {message && (
           <div className={`px-6 py-3.5 flex items-center gap-2.5 text-sm ${
             message.type === "success" 
-              ? "bg-rose-50 border-b border-rose-100 text-rose-900" 
-              : "bg-red-50 border-b border-red-100 text-red-900"
+              ? "bg-rose-50 dark:bg-rose-950/40 border-b border-rose-100 dark:border-rose-900/50 text-rose-900 dark:text-rose-200" 
+              : "bg-red-50 dark:bg-red-950/40 border-b border-red-100 dark:border-red-900/50 text-red-900 dark:text-red-200"
           }`}>
             {message.type === "success" ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
             <span className="font-medium">{message.text}</span>
@@ -1410,14 +1410,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         )}
 
         {/* Tab Navigation */}
-        <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100">
-          <div className="flex bg-slate-100/80 p-1.5 rounded-2xl overflow-x-auto gap-1 border border-slate-200/50">
+        <div className="px-6 py-4 bg-slate-50/50 dark:bg-black/20 border-b border-slate-100 dark:border-white/10">
+          <div className="flex bg-slate-100/80 dark:bg-white/5 p-1.5 rounded-2xl overflow-x-auto gap-1 border border-slate-200/50 dark:border-white/10">
             <button
               onClick={() => setActiveTab("dashboard")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === "dashboard"
-                  ? "bg-white text-rose-900 shadow-xs border border-slate-200/50"
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                  ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
               }`}
             >
               <BarChart3 className="w-4 h-4" />
@@ -1426,10 +1426,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <button
               onClick={() => setActiveTab("links")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === "links"
-                  ? "bg-white text-rose-900 shadow-xs border border-slate-200/50"
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                  ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
               }`}
             >
               <Link2 className="w-4 h-4" />
@@ -1438,10 +1438,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             
             <button
               onClick={() => setActiveTab("sheets")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === "sheets"
-                  ? "bg-white text-rose-900 shadow-xs border border-slate-200/50"
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                  ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
               }`}
             >
               <Grid className="w-4 h-4" />
@@ -1452,8 +1452,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               onClick={() => setActiveTab("staff")}
               className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === "staff"
-                  ? "bg-white text-[#5c0620] shadow-xs border border-slate-200/50 font-bold"
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                  ? "bg-white dark:bg-[#252125] text-[#5c0620] dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10 font-bold"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
               }`}
             >
               <Briefcase className="w-4 h-4" />
@@ -1462,10 +1462,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <button
               onClick={() => setActiveTab("security")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === "security"
-                  ? "bg-white text-rose-900 shadow-xs border border-slate-200/50"
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                  ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -1475,10 +1475,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             {currentUser?.role === "superadmin" && (
               <button
                 onClick={() => setActiveTab("admins")}
-                className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+                className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === "admins"
-                    ? "bg-white text-rose-900 shadow-xs border border-slate-200/50"
-                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                    ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
                 }`}
               >
                 <Users className="w-4 h-4" />
@@ -1489,7 +1489,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         {/* Modal Content Area (Scrollable) */}
-        <div className="flex-1 p-6 overflow-y-auto bg-slate-50/50">
+        <div className="flex-1 p-6 overflow-y-auto bg-slate-50/50 dark:bg-[#121113]">
           
           {/* TAB 0: DASHBOARD */}
           {activeTab === "dashboard" && (
@@ -1517,52 +1517,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               {/* KPI Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs space-y-1">
-                  <div className="flex items-center justify-between text-slate-500">
+                <div className="bg-white dark:bg-[#1e1b1e] p-4 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
                     <span className="text-xs font-semibold">ยอดคลิกเข้าชมรวม</span>
-                    <BarChart2 className="w-4 h-4 text-[#5c0620]" />
+                    <BarChart2 className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900">{totalClicks.toLocaleString()}</div>
-                  <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white">{totalClicks.toLocaleString()}</div>
+                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" />
                     <span>จากทุกลิงก์ในระบบ</span>
                   </div>
                 </div>
 
-                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs space-y-1">
-                  <div className="flex items-center justify-between text-slate-500">
+                <div className="bg-white dark:bg-[#1e1b1e] p-4 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
                     <span className="text-xs font-semibold">ลิงก์ทั้งหมด</span>
-                    <Link2 className="w-4 h-4 text-slate-600" />
+                    <Link2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900">{links.length}</div>
-                  <div className="text-[11px] text-slate-500 font-medium">รายการในพอร์ทัล</div>
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white">{links.length}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">รายการในพอร์ทัล</div>
                 </div>
 
-                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs space-y-1">
-                  <div className="flex items-center justify-between text-slate-500">
+                <div className="bg-white dark:bg-[#1e1b1e] p-4 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
                     <span className="text-xs font-semibold">เฉพาะบุคลากร</span>
-                    <Briefcase className="w-4 h-4 text-[#5c0620]" />
+                    <Briefcase className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
                   </div>
-                  <div className="text-2xl font-extrabold text-rose-900">{staffLinksCount}</div>
-                  <div className="text-[11px] text-rose-600 font-semibold">ระบบภายในต้องใช้รหัส</div>
+                  <div className="text-2xl font-extrabold text-rose-900 dark:text-rose-300">{staffLinksCount}</div>
+                  <div className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold">ระบบภายในต้องใช้รหัส</div>
                 </div>
 
-                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs space-y-1">
-                  <div className="flex items-center justify-between text-slate-500">
+                <div className="bg-white dark:bg-[#1e1b1e] p-4 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-1">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
                     <span className="text-xs font-semibold">เฉพาะนักศึกษา / ทั่วไป</span>
-                    <GraduationCap className="w-4 h-4 text-sky-600" />
+                    <GraduationCap className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                   </div>
-                  <div className="text-2xl font-extrabold text-sky-900">{studentLinksCount + bothLinksCount}</div>
-                  <div className="text-[11px] text-sky-600 font-semibold">นักศึกษา {studentLinksCount} · ทั้งสอง {bothLinksCount}</div>
+                  <div className="text-2xl font-extrabold text-sky-900 dark:text-sky-300">{studentLinksCount + bothLinksCount}</div>
+                  <div className="text-[11px] text-sky-600 dark:text-sky-400 font-semibold">นักศึกษา {studentLinksCount} · ทั้งสอง {bothLinksCount}</div>
                 </div>
               </div>
 
               {/* Chart */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+              <div className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-4">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
-                    <h3 className="font-bold text-slate-800">
+                    <div className="w-2 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
+                    <h3 className="font-bold text-slate-800 dark:text-white">
                       10 อันดับระบบที่มีการเข้าใช้งานมากที่สุด (Top Visited Systems)
                     </h3>
                   </div>
@@ -1571,9 +1571,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <div className="h-[280px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={topLinksData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
-                        <XAxis type="number" />
-                        <YAxis dataKey="name" type="category" width={160} tick={{ fontSize: 11 }} />
+                        <XAxis type="number" stroke="#94a3b8" />
+                        <YAxis dataKey="name" type="category" width={160} tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#94a3b8" />
                         <Tooltip 
+                          contentStyle={{ backgroundColor: '#1e1b1e', borderColor: '#332d33', borderRadius: '12px', color: '#fff' }}
                           formatter={(value) => [`${value} ครั้ง`, "จำนวนคลิก"]}
                           labelFormatter={(label, payload) => {
                             if (payload && payload.length > 0) {
@@ -1582,7 +1583,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             return label;
                           }}
                         />
-                        <Bar dataKey="clicks" fill="#5c0620" radius={[0, 6, 6, 0]} barSize={20} />
+                        <Bar dataKey="clicks" fill="#e11d48" radius={[0, 6, 6, 0]} barSize={20} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1594,15 +1595,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {/* Real-time Usage Table for ALL Links */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+              <div className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
+                    <div className="w-2 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
                     <div>
-                      <h3 className="font-bold text-slate-800">
-                        ตารางสถิติการเข้าใช้งานทุกลิงก์ (Real-time Live Table)
-                      </h3>
-                      <p className="text-xs text-slate-500">เรียงตามยอดเข้าชมจากมากไปน้อย พร้อมระบุกลุ่มเป้าหมาย</p>
+                      <h3 className="font-bold text-slate-800 dark:text-white">ตารางสถิติและลำดับความนิยมของลิงก์ (Real-time Live Table)</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">เรียงตามยอดเข้าชมจากมากไปน้อย พร้อมระบุกลุ่มเป้าหมาย</p>
                     </div>
                   </div>
                   
@@ -1613,12 +1612,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       placeholder="ค้นหาระบบ..."
                       value={dashboardSearch}
                       onChange={(e) => setDashboardSearch(e.target.value)}
-                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20"
+                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20"
                     />
                     <select
                       value={dashboardAudienceFilter}
                       onChange={(e) => setDashboardAudienceFilter(e.target.value as any)}
-                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700"
+                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700 dark:text-slate-200"
                     >
                       <option value="all">ทุกลิงก์ ({links.length})</option>
                       <option value="staff">เฉพาะบุคลากร ({staffLinksCount})</option>
@@ -1628,9 +1627,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
                 </div>
 
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-white/10">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                    <thead className="bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-white/10">
                       <tr>
                         <th className="p-3 w-12 text-center">#</th>
                         <th className="p-3">ระบบ / ลิงก์</th>
@@ -1640,7 +1639,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <th className="p-3 w-20 text-center">เปิดดู</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                       {dashboardFilteredLinks.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="p-8 text-center text-slate-400">
@@ -1652,7 +1651,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
                           const clickShare = totalClicks > 0 ? Math.round(((link.clickCount || 0) / totalClicks) * 100) : 0;
                           return (
-                            <tr key={link.id} className="hover:bg-slate-50/70 transition-colors">
+                            <tr key={link.id} className="hover:bg-slate-50/70 dark:hover:bg-white/5 transition-colors">
                               <td className="p-3 text-center font-bold text-slate-400">
                                 {idx < 3 ? (
                                   <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[11px] font-bold ${
@@ -1665,42 +1664,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 )}
                               </td>
                               <td className="p-3">
-                                <div className="font-semibold text-slate-800 line-clamp-1">{link.title}</div>
-                                <div className="text-[11px] text-slate-400 font-mono truncate max-w-xs">{link.url}</div>
+                                <div className="font-semibold text-slate-800 dark:text-white line-clamp-1">{link.title}</div>
+                                <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-xs">{link.url}</div>
                               </td>
                               <td className="p-3">
                                 {aud === 'staff' ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-full">
-                                    <Briefcase className="w-3 h-3 text-rose-600" />
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40 px-2 py-0.5 rounded-full">
+                                    <Briefcase className="w-3 h-3 text-rose-600 dark:text-rose-400" />
                                     เฉพาะบุคลากร
                                   </span>
                                 ) : aud === 'student' ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-sky-50 text-sky-800 border border-sky-200 px-2 py-0.5 rounded-full">
-                                    <GraduationCap className="w-3 h-3 text-sky-600" />
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 px-2 py-0.5 rounded-full">
+                                    <GraduationCap className="w-3 h-3 text-sky-600 dark:text-sky-400" />
                                     เฉพาะนักศึกษา
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">
-                                    <Users className="w-3 h-3 text-slate-500" />
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full">
+                                    <Users className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                                     ทั้ง 2 กลุ่ม
                                   </span>
                                 )}
                               </td>
                               <td className="p-3 text-right">
-                                <span className="font-mono font-bold text-slate-900 text-sm">
+                                <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
                                   {(link.clickCount || 0).toLocaleString()}
                                 </span>
                                 <span className="text-slate-400 text-[11px] ml-1">ครั้ง</span>
                               </td>
                               <td className="p-3 text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                  <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                  <div className="w-16 bg-slate-100 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
                                     <div 
-                                      className="bg-[#5c0620] h-full rounded-full transition-all duration-300"
+                                      className="bg-[#5c0620] dark:bg-rose-600 h-full rounded-full transition-all duration-300"
                                       style={{ width: `${Math.min(100, Math.max(4, clickShare))}%` }}
                                     ></div>
                                   </div>
-                                  <span className="font-mono text-[11px] text-slate-500 w-8">{clickShare}%</span>
+                                  <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 w-8">{clickShare}%</span>
                                 </div>
                               </td>
                               <td className="p-3 text-center">
@@ -1708,7 +1707,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   href={link.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="p-1.5 inline-flex text-slate-400 hover:text-[#5c0620] hover:bg-rose-50 rounded-lg transition-colors"
+                                  className="p-1.5 inline-flex text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors"
                                   title="เปิดลิงก์"
                                 >
                                   <ExternalLink className="w-4 h-4" />
@@ -1730,24 +1729,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div className="space-y-8">
               {/* Add/Edit Link Form */}
               {currentUser?.role === "superadmin" ? (
-                <div id="link-form" className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+                <div id="link-form" className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
-                    <h3 className="font-bold text-slate-800">
+                    <div className="w-2 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
+                    <h3 className="font-bold text-slate-800 dark:text-white">
                       {editingLinkId ? "แก้ไขข้อมูลลิงก์สำคัญ" : "เพิ่มลิงก์แนะนำใหม่"}
                     </h3>
                   </div>
 
                 <form onSubmit={handleLinkSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5 col-span-1">
-                    <label className="text-xs font-semibold text-slate-600 block">ชื่อลิงก์ / หัวข้อ <span className="text-rose-500">*</span></label>
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">ชื่อลิงก์ / หัวข้อ <span className="text-rose-500">*</span></label>
                     <input
                       type="text"
                       required
                       placeholder="เช่น ระบบบริการการศึกษา (REG)"
                       value={linkTitle}
                       onChange={(e) => setLinkTitle(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm"
                     />
                   </div>
 
@@ -2009,21 +2008,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <span className="text-xs font-normal text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded-full">{links.length} รายการ</span>
                 </h4>
 
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
+                <div className="bg-white dark:bg-[#1e1b1e] rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs overflow-hidden">
                   {links.length === 0 ? (
                     <div className="p-8 text-center text-slate-400 space-y-2">
                       <Info className="w-8 h-8 mx-auto opacity-40" />
                       <p className="text-sm">ยังไม่มีลิงก์ใดๆ ในระบบ คลิกแบบฟอร์มด้านบนเพื่อเพิ่มลิงก์แรก</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
+                    <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-[400px] overflow-y-auto">
                       {links.map((link) => {
                         const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
                         return (
-                          <div key={link.id} className="p-4 flex items-start justify-between gap-4 hover:bg-slate-50/50 transition-colors">
+                          <div key={link.id} className="p-4 flex items-start justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
                             <div className="min-w-0 flex-1 flex gap-3">
                               {/* Small thumbnail preview in admin list */}
-                              <div className="w-14 h-10 rounded-md bg-slate-100 overflow-hidden shrink-0 border border-slate-150">
+                              <div className="w-14 h-10 rounded-md bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-150 dark:border-white/10">
                                 <img 
                                   src={link.thumbnailUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=100&auto=format&fit=crop"} 
                                   alt="" 
@@ -2033,9 +2032,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <span className="font-semibold text-slate-800 text-sm truncate max-w-[250px]">{link.title}</span>
+                                  <span className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[250px]">{link.title}</span>
                                   {aud === 'staff' ? (
-                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-white bg-[#5c0620] rounded-full inline-flex items-center gap-1">
+                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-white bg-[#5c0620] dark:bg-rose-700 rounded-full inline-flex items-center gap-1">
                                       <Briefcase className="w-2.5 h-2.5" />
                                       เฉพาะบุคลากร
                                     </span>
@@ -2045,18 +2044,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                       เฉพาะนักศึกษา
                                     </span>
                                   ) : (
-                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-slate-700 bg-slate-200 rounded-full inline-flex items-center gap-1">
+                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-white/10 rounded-full inline-flex items-center gap-1">
                                       <Users className="w-2.5 h-2.5" />
                                       ทั้ง 2 กลุ่ม
                                     </span>
                                   )}
-                                  <span className="text-[10px] text-slate-500 font-mono">
+                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                                     ({link.clickCount || 0} คลิก)
                                   </span>
                                 </div>
-                                <p className="text-xs text-slate-400 font-mono truncate mb-1">{link.url}</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 font-mono truncate mb-1">{link.url}</p>
                                 {link.description && (
-                                  <p className="text-xs text-slate-500 line-clamp-1 italic">{link.description}</p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 italic">{link.description}</p>
                                 )}
                               </div>
                             </div>
@@ -2142,14 +2141,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {/* Form to Add New Staff Account & Password */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
-                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                  <div className="w-2.5 h-6 bg-[#5c0620] rounded-full"></div>
+              <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
+                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                  <div className="w-2.5 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
                   <div>
-                    <h4 className="font-bold text-slate-800 text-base">
+                    <h4 className="font-bold text-slate-800 dark:text-white text-base">
                       เพิ่มบัญชีและกำหนดรหัสผ่านบุคลากร (Add Staff Account & Password)
                     </h4>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       กรอกชื่อบุคลากรหรือแผนก พร้อมกำหนดรหัสผ่านเข้าใช้งาน
                     </p>
                   </div>
@@ -2240,15 +2239,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {/* List of Staff Accounts */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-white/10">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-6 bg-[#5c0620] rounded-full"></div>
+                    <div className="w-2.5 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
                     <div>
-                      <h4 className="font-bold text-slate-800 text-base">
+                      <h4 className="font-bold text-slate-800 dark:text-white text-base">
                         รายชื่อบัญชีและรหัสผ่านบุคลากร ({staffPasswordItems.length} บัญชี)
                       </h4>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         บัญชีที่สามารถใช้รหัสผ่านเข้าใช้งานโหมดบุคลากรได้ทันที
                       </p>
                     </div>
@@ -2263,7 +2262,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         placeholder="ค้นหาชื่อบัญชี, รหัสผ่าน..."
                         value={staffSearchQuery}
                         onChange={(e) => setStaffSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] bg-slate-50"
+                        className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] bg-slate-50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400"
                       />
                     </div>
                   )}
@@ -2298,24 +2297,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         return (
                           <div
                             key={item.id}
-                            className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-[#5c0620]/30 hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                            className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#252125] hover:border-[#5c0620]/30 dark:hover:border-rose-500/30 hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                           >
                             <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-[#5c0620] border border-rose-100 flex items-center justify-center font-bold text-sm shrink-0">
+                              <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-[#5c0620] dark:text-rose-300 border border-rose-100 dark:border-rose-800/40 flex items-center justify-center font-bold text-sm shrink-0">
                                 {item.label.charAt(0) || "บุ"}
                               </div>
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-bold text-sm text-slate-800">
+                                  <span className="font-bold text-sm text-slate-800 dark:text-white">
                                     {item.label}
                                   </span>
                                   {item.department && (
-                                    <span className="text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                                    <span className="text-[11px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40 px-2.5 py-0.5 rounded-full">
                                       {item.department}
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
+                                <div className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-2 flex-wrap">
                                   <span>สร้างเมื่อ: {item.createdAt ? new Date(item.createdAt).toLocaleString('th-TH') : "ไม่ระบุ"}</span>
                                   {item.createdBy && <span>· โดย {item.createdBy}</span>}
                                 </div>
@@ -2324,15 +2323,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                             <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
                               {/* Password Display Box with Toggle */}
-                              <div className="flex items-center bg-slate-100 rounded-xl px-3 py-1.5 border border-slate-200 gap-2">
-                                <span className="text-xs text-slate-500 font-medium">รหัสผ่าน:</span>
-                                <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
+                              <div className="flex items-center bg-slate-100 dark:bg-[#1a171a] rounded-xl px-3 py-1.5 border border-slate-200 dark:border-white/10 gap-2">
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">รหัสผ่าน:</span>
+                                <span className="font-mono text-xs font-bold text-slate-800 dark:text-white tracking-wider">
                                   {isPasswordVisible ? item.code : "••••••••"}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => toggleShowPassword(item.id)}
-                                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors cursor-pointer"
+                                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-md transition-colors cursor-pointer"
                                   title={isPasswordVisible ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                                 >
                                   {isPasswordVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -2345,8 +2344,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 onClick={() => handleCopyCode(item.id, item.code)}
                                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
                                   copiedCodeId === item.id
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                                    ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40"
+                                    : "bg-white dark:bg-[#1e1b1e] text-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-[#252125]"
                                 }`}
                               >
                                 {copiedCodeId === item.id ? (
@@ -2385,41 +2384,41 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {/* TAB: GOOGLE SHEETS */}
           {activeTab === "sheets" && (
             <div className="space-y-6">
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-6">
+              <div className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-6">
                 <div className="flex items-center gap-2.5 mb-2">
                   <div className="p-2.5 bg-emerald-500 text-white rounded-2xl">
                     <Grid className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800">เชื่อมต่อและจัดการข้อมูลผ่าน Google Sheets</h3>
-                    <p className="text-xs text-slate-500">บันทึกข้อมูลลิงก์ทั้งหมดไปยัง Google Sheets แบบเรียลไทม์ (ผ่าน Web App Script)</p>
+                    <h3 className="font-bold text-slate-800 dark:text-white">เชื่อมต่อและจัดการข้อมูลผ่าน Google Sheets</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">บันทึกข้อมูลลิงก์ทั้งหมดไปยัง Google Sheets แบบเรียลไทม์ (ผ่าน Web App Script)</p>
                   </div>
                 </div>
 
                 <div className="space-y-4 max-w-xl">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 block">เปิดใช้งานการซิงค์ข้อมูลกับ Google Sheets</label>
-                    <label className="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">เปิดใช้งานการซิงค์ข้อมูลกับ Google Sheets</label>
+                    <label className="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                       <input
                         type="checkbox"
                         checked={adminConfig.isGoogleSheetSyncEnabled || false}
                         onChange={(e) => onUpdateConfig({ isGoogleSheetSyncEnabled: e.target.checked })}
-                        className="w-4 h-4 text-emerald-600 bg-slate-100 border-slate-300 rounded focus:ring-emerald-500"
+                        className="w-4 h-4 text-emerald-600 bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-white/20 rounded focus:ring-emerald-500"
                       />
-                      <span className="text-sm font-medium text-slate-700">เปิดการซิงค์ข้อมูลอัตโนมัติ</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">เปิดการซิงค์ข้อมูลอัตโนมัติ</span>
                     </label>
                   </div>
 
                   {adminConfig.isGoogleSheetSyncEnabled && (
                     <div className="space-y-4 pt-2">
                       <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-slate-600 block">Google Apps Script Web App URL</label>
+                        <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">Google Apps Script Web App URL</label>
                         <input
                           type="text"
                           placeholder="https://script.google.com/macros/s/.../exec"
                           value={adminConfig.googleAppsScriptUrl || ""}
                           onChange={(e) => onUpdateConfig({ googleAppsScriptUrl: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-mono"
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-mono"
                         />
                       </div>
                       
@@ -2553,26 +2552,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {activeTab === "security" && (
             <div className="space-y-6">
               {/* Site Info Config */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-6">
+              <div className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-6">
                 <div className="flex items-center gap-2.5 mb-2">
                   <div className="p-2.5 bg-indigo-500 text-white rounded-2xl">
                     <Grid className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800">จัดการข้อมูลเว็บไซต์หน้าบ้าน (Site Info)</h3>
-                    <p className="text-xs text-slate-500">ตั้งชื่อและโลโก้ที่แสดงบนแท็บของเบราว์เซอร์</p>
+                    <h3 className="font-bold text-slate-800 dark:text-white">จัดการข้อมูลเว็บไซต์หน้าบ้าน (Site Info)</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">ตั้งชื่อและโลโก้ที่แสดงบนแท็บของเบราว์เซอร์</p>
                   </div>
                 </div>
 
                 <form onSubmit={handleSiteInfoSubmit} className="space-y-4 max-w-xl">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 block">ชื่อเว็บไซต์ (Site Title)</label>
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">ชื่อเว็บไซต์ (Site Title)</label>
                     <input
                       type="text"
                       placeholder="เช่น ระบบพอร์ทัลลิงก์สำคัญ FST"
                       value={siteTitle}
                       onChange={(e) => setSiteTitle(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
                     />
                   </div>
 
