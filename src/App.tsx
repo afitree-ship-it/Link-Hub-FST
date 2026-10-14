@@ -825,13 +825,6 @@ export default function App() {
     [myPins, links, viewMode]
   );
 
-  const staffLinkCount = useMemo(() => {
-    return links.filter(l => {
-      const aud = l.targetAudience || (l.isStaffOnly ? 'staff' : 'both');
-      return aud === 'staff';
-    }).length;
-  }, [links]);
-
   // Bento order: faculty pins first, then most clicked. Two feature tiles, one wide tile, the rest small.
   const bentoItems = useMemo(() => {
     if (searchQuery) {
@@ -1062,22 +1055,6 @@ export default function App() {
                 onDelete={handleDeleteLink}
               />
             ))
-          )}
-
-          {/* Locked staff systems teaser */}
-          {!loading && viewMode === "student" && staffLinkCount > 0 && !searchQuery && (
-            <div className="col-span-2 lg:col-span-4 bg-[#e4dfdd] rounded-[22px] sm:rounded-[26px] p-4 flex items-center gap-3.5 min-h-[96px]">
-              <span className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shrink-0">
-                <Lock className="w-5 h-5" aria-hidden="true" />
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-[15px] font-semibold">ระบบบุคลากร</span>
-                <span className="block text-[13px] text-[#4a4245]">{staffLinkCount} รายการ</span>
-              </span>
-              <button type="button" onClick={handleStaffTabClick} className="text-[14px] font-semibold bg-[#1f1a1c] text-white px-4 min-h-11 rounded-xl cursor-pointer shrink-0">
-                ปลดล็อก
-              </button>
-            </div>
           )}
         </div>
       </main>
