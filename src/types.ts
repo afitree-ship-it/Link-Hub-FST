@@ -28,7 +28,9 @@ export interface StaffPasswordItem {
   id: string;
   label: string;
   code: string;
+  department?: string;
   createdAt: string;
+  createdBy?: string;
 }
 
 export interface AdminConfig {

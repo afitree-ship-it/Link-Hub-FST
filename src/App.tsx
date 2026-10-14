@@ -40,7 +40,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"student" | "staff">("student");
-  const [staffAudienceFilter, setStaffAudienceFilter] = useState<"all" | "only_staff">("all");
+  const [staffAccountName, setStaffAccountName] = useState<string>(() => {
+    return sessionStorage.getItem("scitech_staff_name") || "";
+  });
   const [layoutMode, setLayoutMode] = useState<"grid" | "list" | "compact">("grid");
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -382,74 +384,107 @@ export default function App() {
 
     // Staff links need a code issued by an admin. Logged-in admins skip the code.
     if (isAdmin) {
+      setStaffAccountName(currentUser?.username || "แอดมิน");
       setViewMode("staff");
       return;
     }
 
     const isStaffUnlocked = sessionStorage.getItem("scitech_staff_session") === "true";
     if (isStaffUnlocked) {
+      const savedName = sessionStorage.getItem("scitech_staff_name") || "บุคลากร";
+      setStaffAccountName(savedName);
       setViewMode("staff");
     } else {
       setShowStaffModal(true);
     }
   };
 
-  // Staff type one password: a shared staff code, or the password of any account in the
-  // Admins sheet (accounts the main admin creates in the back office). It only unlocks staff links.
-  const checkStaffPassword = async (password: string): Promise<boolean> => {
+  // Staff type one password only: the system identifies which account/person it belongs to.
+  const checkStaffPassword = async (password: string): Promise<string | null> => {
     const code = password.trim();
-    if (!code) return false;
-    const hash = await hashStaffCode(code);
-    if ((adminConfig.staffCodeHashes || []).includes(hash)) return true;
-    if ((adminConfig.staffPasswords || []).some(p => p.toLowerCase() === code.toLowerCase())) return true;
-    if (adminConfig.staffPasswordItems?.some(i => i.code.toLowerCase() === code.toLowerCase())) return true;
+    if (!code) return null;
 
+    // 1. Check in staffPasswordItems (assigned by admin with label/name)
+    const matchedItem = (adminConfig.staffPasswordItems || []).find(
+      i => i.code.trim().toLowerCase() === code.toLowerCase()
+    );
+    if (matchedItem) {
+      return matchedItem.label || "บุคลากร";
+    }
+
+    // 2. Check in cached staff users in Admins sheet
     try {
       const cached: (User & { password?: string })[] = JSON.parse(localStorage.getItem("scitech_admin_users") || "[]");
-      if (cached.some(u => u.password === password)) return true;
+      const matchedUser = cached.find(u => u.password === code);
+      if (matchedUser) {
+        return matchedUser.username;
+      }
     } catch (err) {}
 
+    // 3. Check legacy plain passwords
+    if ((adminConfig.staffPasswords || []).some(p => p.trim().toLowerCase() === code.toLowerCase())) {
+      return "บุคลากร";
+    }
+
+    // 4. Check staff code hashes
+    const hash = await hashStaffCode(code);
+    if ((adminConfig.staffCodeHashes || []).includes(hash)) {
+      return "บุคลากร";
+    }
+
+    // 5. Check remote Apps Script
     if (adminConfig.googleAppsScriptUrl) {
       const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
       try {
         const response = await fetch(adminConfig.googleAppsScriptUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'staffLogin', password }),
+          body: JSON.stringify({ action: 'staffLogin', password: code }),
           signal: controller ? controller.signal : undefined,
         });
         let resData: any = null;
         try { resData = JSON.parse(await response.text()); } catch (e) {}
-        if (resData && resData.success) return true;
+        if (resData && resData.success) {
+          return resData.staffName || "บุคลากร";
+        }
       } catch (err) {
         console.warn("Staff password check via Apps Script failed:", err);
       } finally {
         if (timeoutId) clearTimeout(timeoutId);
       }
     }
-    return false;
+    return null;
   };
 
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setStaffLoginError("");
     setIsStaffChecking(true);
-    let valid = false;
+    let matchedName: string | null = null;
     try {
-      valid = await checkStaffPassword(staffPasswordInput);
+      matchedName = await checkStaffPassword(staffPasswordInput);
     } finally {
       setIsStaffChecking(false);
     }
-    if (valid) {
+    if (matchedName) {
       sessionStorage.setItem("scitech_staff_session", "true");
+      sessionStorage.setItem("scitech_staff_name", matchedName);
+      setStaffAccountName(matchedName);
       setShowStaffModal(false);
       setStaffPasswordInput("");
       setStaffLoginError("");
       setViewMode("staff");
     } else {
-      setStaffLoginError("รหัสไม่ถูกต้อง ขอรหัสจากแอดมินของคณะ");
+      setStaffLoginError("รหัสผ่านไม่ถูกต้อง กรุณาติดต่อขอรหัสจากผู้ดูแลระบบ");
     }
+  };
+
+  const handleStaffLogout = () => {
+    sessionStorage.removeItem("scitech_staff_session");
+    sessionStorage.removeItem("scitech_staff_name");
+    setStaffAccountName("");
+    setViewMode("student");
   };
 
   const handleLogout = () => {
@@ -733,10 +768,6 @@ export default function App() {
         if (aud === "student") {
           return false;
         }
-        // Sub-filter if staff toggled "เฉพาะบุคลากรเท่านั้น"
-        if (staffAudienceFilter === "only_staff" && aud !== "staff") {
-          return false;
-        }
       }
 
       // 2. Search Filter
@@ -760,7 +791,7 @@ export default function App() {
       // Then by creation date (newest first, or keep default order)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [links, searchQuery, viewMode, staffAudienceFilter, currentUser, isAdmin]);
+  }, [links, searchQuery, viewMode, currentUser, isAdmin]);
 
   // Personal pins: kept in this browser only, so every visitor has their own list.
   const [myPins, setMyPins] = useState<string[]>(() => {
@@ -856,10 +887,19 @@ export default function App() {
                 type="button"
                 aria-pressed={viewMode === "staff"}
                 onClick={handleStaffTabClick}
-                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "staff" ? "bg-[#1f1a1c] text-white" : "text-[#4a4245] hover:bg-[#f3f0ef]"}`}
+                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "staff" ? "bg-[#5c0620] text-white" : "text-[#4a4245] hover:bg-[#f3f0ef]"}`}
               >
-                {viewMode !== "staff" && <Lock className="w-3.5 h-3.5" aria-hidden="true" />}
-                บุคลากร
+                {viewMode !== "staff" ? (
+                  <>
+                    <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>บุคลากร</span>
+                  </>
+                ) : (
+                  <>
+                    <Briefcase className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span className="max-w-[130px] truncate sm:max-w-none">{staffAccountName || "บุคลากร"}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -881,55 +921,34 @@ export default function App() {
           )}
         </div>
 
-        {/* Staff Mode Status Banner & Filter */}
+        {/* Staff Mode Status Banner */}
         {viewMode === "staff" && (
-          <div className="bg-white rounded-2xl p-3 md:px-5 md:py-3.5 border border-[#5c0620]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-[#5c0620] text-white flex items-center justify-center shrink-0">
-                <Briefcase className="w-4 h-4" />
+          <div className="bg-white rounded-2xl p-3.5 md:px-5 md:py-3.5 border border-[#5c0620]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-[#5c0620] text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Briefcase className="w-5 h-5" />
               </span>
               <div>
-                <div className="font-bold text-sm text-slate-800 flex items-center gap-2 flex-wrap">
-                  <span>โหมดบุคลากร (Staff Portal)</span>
-                  <span className="text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-full">
-                    แสดงเฉพาะระบบสำหรับบุคลากร & ทั่วไป
+                <div className="font-bold text-sm md:text-[15px] text-slate-800 flex items-center gap-2 flex-wrap">
+                  <span className="text-slate-500 font-normal">เข้าสู่ระบบในชื่อ:</span>
+                  <span className="text-[#5c0620] bg-rose-50 border border-rose-200/80 px-2.5 py-0.5 rounded-lg font-bold">
+                    {isAdmin ? (currentUser?.username || "ผู้ดูแลระบบ") : (staffAccountName || "บุคลากร")}
+                  </span>
+                  <span className="text-[11px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                    โหมดบุคลากร (Staff Portal)
                   </span>
                 </div>
-                <p className="text-xs text-slate-500">
-                  ซ่อนลิงก์เฉพาะนักศึกษาโดยอัตโนมัติ ({filteredLinks.length} รายการที่ตรงกับสิทธิ์)
+                <p className="text-xs text-slate-500 mt-0.5">
+                  แสดงเฉพาะระบบสำหรับบุคลากรและระบบทั่วไป (ซ่อนระบบเฉพาะนักศึกษาอัตโนมัติ) · {filteredLinks.length} รายการที่ตรงกับสิทธิ์
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
-              <div className="flex bg-slate-100 p-1 rounded-xl gap-1 text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setStaffAudienceFilter("all")}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    staffAudienceFilter === "all" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  ทั้งหมดของบุคลากร
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStaffAudienceFilter("only_staff")}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    staffAudienceFilter === "only_staff" ? "bg-[#5c0620] text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  เฉพาะบุคลากรเท่านั้น
-                </button>
-              </div>
-
+            <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
               <button
                 type="button"
-                onClick={() => {
-                  sessionStorage.removeItem("scitech_staff_session");
-                  setViewMode("student");
-                }}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 font-semibold"
+                onClick={handleStaffLogout}
+                className="px-3.5 py-2 text-xs text-slate-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 font-semibold self-stretch sm:self-auto justify-center"
                 title="ออกจากโหมดบุคลากร"
               >
                 <Lock className="w-3.5 h-3.5" />

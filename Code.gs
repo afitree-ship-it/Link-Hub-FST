@@ -352,25 +352,48 @@ function doPost(e) {
     else if (action === "staffLogin") {
       var pw = String(postData.password || "").trim();
       var ok = false;
+      var staffName = "บุคลากร";
       if (pw) {
         // 1. ตรวจสอบในชีต Admins
         var aRows = getAdminsSheet().getDataRange().getValues();
         for (var sr = 1; sr < aRows.length; sr++) {
-          if (String(aRows[sr][0]) && String(aRows[sr][1]) === pw) { ok = true; break; }
+          if (String(aRows[sr][0]) && String(aRows[sr][1]) === pw) {
+            ok = true;
+            staffName = String(aRows[sr][0]);
+            break;
+          }
         }
-        // 2. ตรวจสอบในชีต Settings (staffPasswords / staffPasswordItems)
+        // 2. ตรวจสอบในชีต Settings (staffPasswordItems / staffPasswords)
         if (!ok) {
           var sRows = getSettingsSheet().getDataRange().getValues();
           for (var sk = 1; sk < sRows.length; sk++) {
             var sKey = String(sRows[sk][0]).trim();
-            if (sKey === "staffPasswords" || sKey === "staffPasswordItems") {
+            if (sKey === "staffPasswordItems") {
               try {
                 var list = JSON.parse(String(sRows[sk][1]));
                 if (Array.isArray(list)) {
                   for (var li = 0; li < list.length; li++) {
                     var item = list[li];
-                    if (typeof item === "string" && item === pw) { ok = true; break; }
-                    if (item && item.code === pw) { ok = true; break; }
+                    if (item && String(item.code || "").trim() === pw) {
+                      ok = true;
+                      staffName = item.label || item.name || "บุคลากร";
+                      break;
+                    }
+                  }
+                }
+              } catch(e) {}
+            }
+            if (!ok && sKey === "staffPasswords") {
+              try {
+                var list2 = JSON.parse(String(sRows[sk][1]));
+                if (Array.isArray(list2)) {
+                  for (var li2 = 0; li2 < list2.length; li2++) {
+                    var item2 = list2[li2];
+                    if (typeof item2 === "string" && item2 === pw) {
+                      ok = true;
+                      staffName = "บุคลากร";
+                      break;
+                    }
                   }
                 }
               } catch(e) {}
@@ -378,7 +401,7 @@ function doPost(e) {
           }
         }
       }
-      out = ok ? { success: true } : { success: false, error: "Invalid password" };
+      out = ok ? { success: true, staffName: staffName } : { success: false, error: "Invalid password" };
     }
     // 7. เพิ่มหรือแก้ไขแอดมิน (superadmin หรือแอดมินเพิ่มบทบาท staff หรือแก้รหัสตัวเอง)
     else if (action === "saveAdmin") {

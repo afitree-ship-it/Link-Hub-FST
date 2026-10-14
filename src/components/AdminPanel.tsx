@@ -5,7 +5,7 @@ import {
   Grid, Link2, CheckCircle2, AlertCircle, RefreshCw, Settings,
   Upload, FileImage, Pin, BarChart3, Bell, Plus, Users, ShieldAlert,
   Lock, Download, Copy, Check, FileJson, GraduationCap, Briefcase,
-  ExternalLink, Eye, TrendingUp, Sparkles, BarChart2
+  ExternalLink, Eye, EyeOff, UserCheck, Search, TrendingUp, Sparkles, BarChart2
 } from "lucide-react";
 import { AVAILABLE_ICONS, DynamicIcon } from "./DynamicIcon";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -381,25 +381,48 @@ function doPost(e) {
     else if (action === "staffLogin") {
       var pw = String(postData.password || "").trim();
       var ok = false;
+      var staffName = "บุคลากร";
       if (pw) {
         // 1. ตรวจสอบในชีต Admins
         var aRows = getAdminsSheet().getDataRange().getValues();
         for (var sr = 1; sr < aRows.length; sr++) {
-          if (String(aRows[sr][0]) && String(aRows[sr][1]) === pw) { ok = true; break; }
+          if (String(aRows[sr][0]) && String(aRows[sr][1]) === pw) {
+            ok = true;
+            staffName = String(aRows[sr][0]);
+            break;
+          }
         }
-        // 2. ตรวจสอบในชีต Settings (staffPasswords / staffPasswordItems)
+        // 2. ตรวจสอบในชีต Settings (staffPasswordItems / staffPasswords)
         if (!ok) {
           var sRows = getSettingsSheet().getDataRange().getValues();
           for (var sk = 1; sk < sRows.length; sk++) {
             var sKey = String(sRows[sk][0]).trim();
-            if (sKey === "staffPasswords" || sKey === "staffPasswordItems") {
+            if (sKey === "staffPasswordItems") {
               try {
                 var list = JSON.parse(String(sRows[sk][1]));
                 if (Array.isArray(list)) {
                   for (var li = 0; li < list.length; li++) {
                     var item = list[li];
-                    if (typeof item === "string" && item === pw) { ok = true; break; }
-                    if (item && item.code === pw) { ok = true; break; }
+                    if (item && String(item.code || "").trim() === pw) {
+                      ok = true;
+                      staffName = item.label || item.name || "บุคลากร";
+                      break;
+                    }
+                  }
+                }
+              } catch(e) {}
+            }
+            if (!ok && sKey === "staffPasswords") {
+              try {
+                var list2 = JSON.parse(String(sRows[sk][1]));
+                if (Array.isArray(list2)) {
+                  for (var li2 = 0; li2 < list2.length; li2++) {
+                    var item2 = list2[li2];
+                    if (typeof item2 === "string" && item2 === pw) {
+                      ok = true;
+                      staffName = "บุคลากร";
+                      break;
+                    }
                   }
                 }
               } catch(e) {}
@@ -407,7 +430,7 @@ function doPost(e) {
           }
         }
       }
-      out = ok ? { success: true } : { success: false, error: "Invalid password" };
+      out = ok ? { success: true, staffName: staffName } : { success: false, error: "Invalid password" };
     }
     // 7. เพิ่มหรือแก้ไขแอดมิน (superadmin หรือแอดมินเพิ่มบทบาท staff หรือแก้รหัสตัวเอง)
     else if (action === "saveAdmin") {
@@ -673,6 +696,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   });
   const [newStaffPassword, setNewStaffPassword] = useState("");
   const [newStaffPasswordLabel, setNewStaffPasswordLabel] = useState("");
+  const [newStaffDepartment, setNewStaffDepartment] = useState("");
+  const [staffSearchQuery, setStaffSearchQuery] = useState("");
+  const [showPasswordIds, setShowPasswordIds] = useState<Record<string, boolean>>({});
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
   // New Staff Account (Individual login) Form State
@@ -1008,16 +1034,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const handleAddStaffPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = newStaffPassword.trim();
-    if (!code) return;
+    const label = newStaffPasswordLabel.trim();
+    if (!label) {
+      showAlert("กรุณาระบุชื่อบัญชีหรือชื่อบุคลากร", "error");
+      return;
+    }
+    if (!code) {
+      showAlert("กรุณาระบุรหัสผ่านเข้าใช้งาน", "error");
+      return;
+    }
     
     setIsSubmitting(true);
     try {
-      const label = newStaffPasswordLabel.trim() || `รหัสบุคลากรชุดที่ ${staffPasswordItems.length + 1}`;
       const newItem: StaffPasswordItem = {
         id: `spw-${Date.now()}`,
         label,
         code,
-        createdAt: new Date().toISOString()
+        department: newStaffDepartment.trim() || undefined,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser?.username || "แอดมิน"
       };
       const updatedItems = [...staffPasswordItems.filter(i => i.code !== code), newItem];
       const updatedPasswords = Array.from(new Set([...staffPasswords, code]));
@@ -1031,6 +1066,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setStaffPasswordItems(updatedItems);
       setNewStaffPassword("");
       setNewStaffPasswordLabel("");
+      setNewStaffDepartment("");
 
       await onUpdateConfig({
         ...adminConfig,
@@ -1047,29 +1083,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         }, authCreds);
       }
 
-      showAlert(`เพิ่มรหัสผ่านบุคลากร "${code}" เรียบร้อยแล้ว`);
+      showAlert(`บันทึกบัญชีบุคลากร "${label}" (รหัส: ${code}) เรียบร้อยแล้ว`);
     } catch (err) {
-      showAlert("เกิดข้อผิดพลาดในการเพิ่มรหัสผ่านบุคลากร", "error");
+      showAlert("เกิดข้อผิดพลาดในการบันทึกข้อมูลบุคลากร", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleRemoveStaffPassword = async (passwordToRemove: string) => {
+  const handleRemoveStaffPassword = async (itemToRemove: StaffPasswordItem) => {
     setIsSubmitting(true);
     try {
-      const updatedPasswords = staffPasswords.filter(p => p !== passwordToRemove);
-      const updatedItems = staffPasswordItems.filter(i => i.code !== passwordToRemove);
+      const updatedItems = staffPasswordItems.filter(i => i.id !== itemToRemove.id && i.code !== itemToRemove.code);
+      const remainingCodes = updatedItems.map(i => i.code);
       const { hashStaffCode } = await import('../staffCodes');
-      const removedHash = await hashStaffCode(passwordToRemove);
+      const removedHash = await hashStaffCode(itemToRemove.code);
       const updatedHashes = (adminConfig.staffCodeHashes || []).filter(h => h !== removedHash);
 
-      setStaffPasswords(updatedPasswords);
+      setStaffPasswords(remainingCodes);
       setStaffPasswordItems(updatedItems);
 
       await onUpdateConfig({
         ...adminConfig,
-        staffPasswords: updatedPasswords,
+        staffPasswords: remainingCodes,
         staffPasswordItems: updatedItems,
         staffCodeHashes: updatedHashes
       });
@@ -1077,21 +1113,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       if (adminConfig.googleAppsScriptUrl && authCreds) {
         const { sendActionToWebApp } = await import('../googleSheets');
         sendActionToWebApp(adminConfig.googleAppsScriptUrl, 'saveStaffPasswords', {
-          passwords: updatedPasswords,
+          passwords: remainingCodes,
           passwordItems: updatedItems
         }, authCreds);
       }
 
-      showAlert("ลบรหัสผ่านสำหรับหมวดหมู่บุคลากรสำเร็จ");
+      showAlert(`ลบบัญชี "${itemToRemove.label}" เรียบร้อยแล้ว`);
     } catch (err) {
-      showAlert("เกิดข้อผิดพลาดในการลบรหัสผ่านบุคลากร", "error");
+      showAlert("เกิดข้อผิดพลาดในการลบบัญชีบุคลากร", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleGenerateRandomStaffCode = () => {
-    const prefixes = ["FST-STAFF", "SCI-TECH", "STAFF"];
+    const prefixes = ["STAFF", "SCI", "FST"];
     const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     setNewStaffPassword(`${prefix}-${randomNum}`);
@@ -1102,6 +1138,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setCopiedCodeId(id);
     setTimeout(() => setCopiedCodeId(null), 2000);
     showAlert(`คัดลอกรหัสผ่าน "${code}" แล้ว`);
+  };
+
+  const toggleShowPassword = (id: string) => {
+    setShowPasswordIds(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleAddStaffAccount = async (e: React.FormEvent) => {
@@ -1410,14 +1450,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <button
               onClick={() => setActiveTab("staff")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
+              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === "staff"
-                  ? "bg-white text-rose-900 shadow-xs border border-slate-200/50"
+                  ? "bg-white text-[#5c0620] shadow-xs border border-slate-200/50 font-bold"
                   : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
               }`}
             >
-              <Key className="w-4 h-4" />
-              <span>รหัสผ่านบุคลากร ({staffPasswordItems.length})</span>
+              <Briefcase className="w-4 h-4" />
+              <span>บัญชีบุคลากร ({staffPasswordItems.length})</span>
             </button>
 
             <button
@@ -2063,269 +2103,279 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           )}
 
-          {/* TAB: STAFF PASSWORD MANAGEMENT */}
+          {/* TAB: STAFF MANAGEMENT */}
           {activeTab === "staff" && (
             <div className="space-y-6">
-              {/* Header Box */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2.5 bg-[#5c0620] text-white rounded-2xl shadow-xs">
-                    <Key className="w-5 h-5" />
+              {/* Header Overview Card */}
+              <div className="bg-gradient-to-r from-slate-900 via-[#5c0620] to-[#3a0210] text-white p-6 rounded-3xl shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 text-white">
+                      <Briefcase className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                        <span>จัดการบัญชีและรหัสผ่านบุคลากร</span>
+                        <span className="text-xs bg-rose-500/30 text-rose-200 border border-rose-300/30 px-2.5 py-0.5 rounded-full font-normal">
+                          Staff Accounts
+                        </span>
+                      </h3>
+                      <p className="text-xs text-rose-100/80 mt-0.5">
+                        กำหนดชื่อบัญชี/ชื่อบุคลากร พร้อมรหัสผ่านสำหรับเข้าใช้งานระบบ
+                      </p>
+                    </div>
                   </div>
+
+                  <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 self-start sm:self-auto">
+                    <Users className="w-4 h-4 text-rose-300" />
+                    <span className="text-xs text-rose-100">จำนวนบัญชีในระบบ:</span>
+                    <span className="text-sm font-bold text-white font-mono">{staffPasswordItems.length} บัญชี</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 text-xs text-rose-100/90 leading-relaxed flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-rose-300 shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="font-bold text-slate-800 text-base">
-                      จัดการรหัสผ่านบุคลากร (Staff Passwords Management)
-                    </h3>
+                    <strong className="text-white">คำอธิบายการทำงาน:</strong> เมื่อระบุ <strong>"ชื่อบัญชี/ชื่อบุคลากร"</strong> และ <strong>"รหัสผ่าน"</strong> แล้ว บุคลากรจะสามารถล็อกอินที่หน้าเว็บด้วย<strong>รหัสผ่านเพียงอย่างเดียว</strong> (ไม่ต้องกรอก Username) ระบบจะระบุตัวตนและแสดงชื่อบัญชีนั้นบนแถบโหมดบุคลากรโดยอัตโนมัติ พร้อมซ่อนลิงก์เฉพาะนักศึกษาทันที
+                  </div>
+                </div>
+              </div>
+
+              {/* Form to Add New Staff Account & Password */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
+                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+                  <div className="w-2.5 h-6 bg-[#5c0620] rounded-full"></div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-base">
+                      เพิ่มบัญชีและกำหนดรหัสผ่านบุคลากร (Add Staff Account & Password)
+                    </h4>
                     <p className="text-xs text-slate-500">
-                      แอดมินสามารถสร้างรหัสผ่านเพื่อแจกจ่ายให้อาจารย์และเจ้าหน้าที่ใช้ปลดล็อกดูลิงก์ "เฉพาะบุคลากร" ได้ทันที
+                      กรอกชื่อบุคลากรหรือแผนก พร้อมกำหนดรหัสผ่านเข้าใช้งาน
                     </p>
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-rose-50/60 rounded-xl border border-rose-100 text-xs text-rose-900 leading-relaxed space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <Info className="w-4 h-4 text-[#5c0620] shrink-0" />
-                    <span>คำแนะนำการใช้งาน:</span>
-                  </div>
-                  <p>
-                    เมื่อผู้ใช้งานเข้ามาที่หน้าเว็บหลักและคลิกแท็บ <strong>"บุคลากร"</strong> ระบบจะถามหารหัสผ่านนี้ หากกรอกถูกต้องระบบจะแสดงเฉพาะลิงก์ที่บุคลากรมีสิทธิ์เข้าถึง (ลิงก์ทั่วไป + ลิงก์เฉพาะบุคลากร) และจะซ่อนลิงก์เฉพาะนักศึกษาโดยอัตโนมัติ
-                  </p>
-                </div>
-              </div>
-
-              {/* Form to Add New Staff Passcode */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
-                  <h4 className="font-bold text-slate-800 text-sm">
-                    สร้างรหัสผ่านใหม่สำหรับบุคลากร (Add Staff Passcode)
-                  </h4>
-                </div>
-
                 <form onSubmit={handleAddStaffPassword} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-600 block">
-                        รหัสผ่านที่ต้องการ (Passcode) <span className="text-rose-500">*</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Field 1: Staff Account Name */}
+                    <div className="space-y-1.5 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        ชื่อบัญชี / ชื่อบุคลากร <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="เช่น อ.สมชาย ใจดี หรือ งานวิชาการ"
+                        value={newStaffPasswordLabel}
+                        onChange={(e) => setNewStaffPasswordLabel(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm bg-slate-50/50 focus:bg-white transition-colors"
+                      />
+                      <span className="text-[11px] text-slate-400 block">
+                        ชื่อนี้จะถูกแสดงเมื่อเข้าใช้งาน
+                      </span>
+                    </div>
+
+                    {/* Field 2: Password */}
+                    <div className="space-y-1.5 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        รหัสผ่านเข้าใช้งาน (Password) <span className="text-rose-500">*</span>
                       </label>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           required
-                          placeholder="เช่น STAFF-2024 หรือ SCI-9999"
+                          placeholder="เช่น sci2025 หรือ staff1234"
                           value={newStaffPassword}
                           onChange={(e) => setNewStaffPassword(e.target.value)}
-                          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono"
+                          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono bg-slate-50/50 focus:bg-white transition-colors"
                         />
                         <button
                           type="button"
                           onClick={handleGenerateRandomStaffCode}
-                          className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                          className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap"
                           title="สุ่มรหัสผ่านอัตโนมัติ"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                           <span>สุ่มรหัส</span>
                         </button>
                       </div>
+                      <span className="text-[11px] text-slate-400 block">
+                        รหัสสำหรับปลดล็อกโหมดบุคลากร
+                      </span>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-600 block">
-                        หมายเหตุ / ป้ายกำกับ (Label / Note - ระบุหรือไม่ก็ได้)
+                    {/* Field 3: Department / Note */}
+                    <div className="space-y-1.5 md:col-span-1">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        สาขาวิชา / ฝ่ายงาน (ระบุหรือไม่ก็ได้)
                       </label>
                       <input
                         type="text"
-                        placeholder="เช่น อาจารย์สาขาวิทยาการคอมฯ, เจ้าหน้าที่สายสนับสนุน"
-                        value={newStaffPasswordLabel}
-                        onChange={(e) => setNewStaffPasswordLabel(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm"
+                        placeholder="เช่น สาขาวิชาวิทยาการคอมพิวเตอร์"
+                        value={newStaffDepartment}
+                        onChange={(e) => setNewStaffDepartment(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm bg-slate-50/50 focus:bg-white transition-colors"
                       />
+                      <span className="text-[11px] text-slate-400 block">
+                        ข้อมูลสังกัดสำหรับจัดกลุ่ม
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-1">
+                  <div className="flex justify-end pt-2">
                     <button
                       type="submit"
-                      disabled={isSubmitting || !newStaffPassword.trim()}
-                      className="px-5 py-2.5 bg-[#5c0620] hover:bg-rose-950 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-[#5c0620]/15 disabled:opacity-50 cursor-pointer"
+                      disabled={isSubmitting || !newStaffPassword.trim() || !newStaffPasswordLabel.trim()}
+                      className="px-6 py-2.5 bg-[#5c0620] hover:bg-rose-950 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-[#5c0620]/20 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
                         <RefreshCw className="w-4 h-4 animate-spin" />
                       ) : (
                         <Plus className="w-4 h-4" />
                       )}
-                      <span>บันทึกและเปิดใช้งานรหัสนี้</span>
+                      <span>บันทึกบัญชีบุคลากร</span>
                     </button>
                   </div>
                 </form>
               </div>
 
-              {/* List of Active Staff Passwords */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
-                    <h4 className="font-bold text-slate-800 text-sm">
-                      รายการรหัสผ่านบุคลากรที่ใช้งานได้ ({staffPasswordItems.length} รหัส)
-                    </h4>
+              {/* List of Staff Accounts */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-2.5 h-6 bg-[#5c0620] rounded-full"></div>
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-base">
+                        รายชื่อบัญชีและรหัสผ่านบุคลากร ({staffPasswordItems.length} บัญชี)
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        บัญชีที่สามารถใช้รหัสผ่านเข้าใช้งานโหมดบุคลากรได้ทันที
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Search filter for staff */}
+                  {staffPasswordItems.length > 0 && (
+                    <div className="relative w-full sm:w-64">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="ค้นหาชื่อบัญชี, รหัสผ่าน..."
+                        value={staffSearchQuery}
+                        onChange={(e) => setStaffSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] bg-slate-50"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {staffPasswordItems.length === 0 ? (
-                  <div className="py-10 text-center text-slate-400 space-y-2">
-                    <Key className="w-8 h-8 mx-auto opacity-30 text-rose-800" />
-                    <p className="text-sm">ยังไม่มีรหัสผ่านบุคลากรในระบบ</p>
-                    <p className="text-xs text-slate-400">กรุณาสร้างรหัสผ่านในแบบฟอร์มด้านบนเพื่อให้บุคลากรใช้เข้าดูลิงก์เฉพาะบุคลากรได้</p>
+                  <div className="py-12 text-center text-slate-400 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-50 text-[#5c0620] flex items-center justify-center mx-auto">
+                      <Briefcase className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-700">ยังไม่มีบัญชีบุคลากรในระบบ</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        กรุณาเพิ่มชื่อบัญชีและรหัสผ่านในแบบฟอร์มด้านบนเพื่อให้บุคลากรใช้เข้าดูระบบเฉพาะบุคลากรได้
+                      </p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 overflow-hidden">
-                    {staffPasswordItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2.5 flex-wrap">
-                            <span className="font-mono text-base font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
-                              {item.code}
-                            </span>
-                            {item.label && (
-                              <span className="text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-full">
-                                {item.label}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                            <span>สร้างเมื่อ: {item.createdAt ? new Date(item.createdAt).toLocaleString('th-TH') : "ไม่ระบุ"}</span>
-                            {item.createdBy && <span>· โดย {item.createdBy}</span>}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleCopyCode(item.id, item.code)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
-                              copiedCodeId === item.id
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
-                            }`}
+                  <div className="grid grid-cols-1 gap-3">
+                    {staffPasswordItems
+                      .filter(item => {
+                        if (!staffSearchQuery.trim()) return true;
+                        const q = staffSearchQuery.toLowerCase();
+                        return (
+                          item.label.toLowerCase().includes(q) ||
+                          item.code.toLowerCase().includes(q) ||
+                          (item.department && item.department.toLowerCase().includes(q))
+                        );
+                      })
+                      .map((item) => {
+                        const isPasswordVisible = !!showPasswordIds[item.id];
+                        return (
+                          <div
+                            key={item.id}
+                            className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-[#5c0620]/30 hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                           >
-                            {copiedCodeId === item.id ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>คัดลอกแล้ว</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5 text-slate-400" />
-                                <span>คัดลอกรหัส</span>
-                              </>
-                            )}
-                          </button>
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-[#5c0620] border border-rose-100 flex items-center justify-center font-bold text-sm shrink-0">
+                                {item.label.charAt(0) || "บุ"}
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-sm text-slate-800">
+                                    {item.label}
+                                  </span>
+                                  {item.department && (
+                                    <span className="text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                                      {item.department}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
+                                  <span>สร้างเมื่อ: {item.createdAt ? new Date(item.createdAt).toLocaleString('th-TH') : "ไม่ระบุ"}</span>
+                                  {item.createdBy && <span>· โดย {item.createdBy}</span>}
+                                </div>
+                              </div>
+                            </div>
 
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStaffPassword(item.code)}
-                            disabled={isSubmitting}
-                            className="p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors cursor-pointer"
-                            title="ลบรหัสนี้"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                            <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
+                              {/* Password Display Box with Toggle */}
+                              <div className="flex items-center bg-slate-100 rounded-xl px-3 py-1.5 border border-slate-200 gap-2">
+                                <span className="text-xs text-slate-500 font-medium">รหัสผ่าน:</span>
+                                <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
+                                  {isPasswordVisible ? item.code : "••••••••"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleShowPassword(item.id)}
+                                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors cursor-pointer"
+                                  title={isPasswordVisible ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                                >
+                                  {isPasswordVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
 
-              {/* Individual Staff Accounts Form */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-6 bg-[#5c0620] rounded-full"></div>
-                  <div>
-                    <h4 className="font-bold text-slate-800 text-sm">
-                      เพิ่มบัญชีบุคลากรแบบระบุชื่อผู้ใช้ (Individual Staff Account)
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      สำหรับให้อาจารย์/บุคลากรล็อกอินด้วย Username และ Password ของตนเอง
-                    </p>
-                  </div>
-                </div>
+                              {/* Copy Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCode(item.id, item.code)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                                  copiedCodeId === item.id
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                                }`}
+                              >
+                                {copiedCodeId === item.id ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>คัดลอกแล้ว</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>คัดลอกรหัส</span>
+                                  </>
+                                )}
+                              </button>
 
-                <form onSubmit={handleAddStaffAccount} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-600 block">
-                        ชื่อผู้ใช้งาน (Staff Username) <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="เช่น somchai.p หรือ staff_fst"
-                        value={newStaffUsername}
-                        onChange={(e) => setNewStaffUsername(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-600 block">
-                        รหัสผ่าน (Staff Password) <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        placeholder="รหัสผ่านเข้าใช้งาน"
-                        value={newStaffAccountPassword}
-                        onChange={(e) => setNewStaffAccountPassword(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-1">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || !newStaffUsername.trim() || !newStaffAccountPassword.trim()}
-                      className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                    >
-                      {isSubmitting ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4" />
-                      )}
-                      <span>เพิ่มบัญชีบุคลากร</span>
-                    </button>
-                  </div>
-                </form>
-
-                {/* List of Staff Accounts */}
-                {adminUsers.filter(u => u.role === "staff").length > 0 && (
-                  <div className="pt-2 space-y-2">
-                    <div className="text-xs font-bold text-slate-600">บัญชีบุคลากรในระบบ:</div>
-                    <div className="rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-                      {adminUsers.filter(u => u.role === "staff").map((staffUser, idx) => (
-                        <div key={idx} className="p-3 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors">
-                          <div className="flex items-center gap-2">
-                            <Briefcase className="w-3.5 h-3.5 text-[#5c0620]" />
-                            <span className="font-semibold text-slate-800">{staffUser.username}</span>
-                            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-mono">
-                              รหัส: {(staffUser as any).password || "••••••••"}
-                            </span>
+                              {/* Delete Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveStaffPassword(item)}
+                                disabled={isSubmitting}
+                                className="p-2 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-100"
+                                title="ลบบัญชีนี้"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAdmin(staffUser.username)}
-                            className="p-1 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
-                            title="ลบบัญชีนี้"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                        );
+                      })}
                   </div>
                 )}
               </div>
