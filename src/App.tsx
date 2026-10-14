@@ -881,17 +881,8 @@ export default function App() {
                 onClick={handleStaffTabClick}
                 className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "staff" ? "bg-[#5c0620] text-white" : "text-[#4a4245] hover:bg-[#f3f0ef]"}`}
               >
-                {viewMode !== "staff" ? (
-                  <>
-                    <Lock className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>บุคลากร</span>
-                  </>
-                ) : (
-                  <>
-                    <Briefcase className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="max-w-[130px] truncate sm:max-w-none">{staffAccountName || "บุคลากร"}</span>
-                  </>
-                )}
+                {viewMode !== "staff" && <Lock className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span>บุคลากร</span>
               </button>
             </div>
           </div>
