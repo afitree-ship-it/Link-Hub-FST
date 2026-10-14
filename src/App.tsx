@@ -20,7 +20,6 @@ import {
   Globe,
   Info,
   MapPin,
-  Phone,
   Mail,
   LayoutGrid,
   List as ListIcon,
@@ -1105,10 +1104,6 @@ export default function App() {
               <li className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#5c0620] shrink-0" />
                 <span>อาคารคณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยฟัตตอนี</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-[#5c0620] shrink-0" />
-                <span>073-418600 (ต่อ งานบริการหลักสูตร)</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#5c0620] shrink-0" />
