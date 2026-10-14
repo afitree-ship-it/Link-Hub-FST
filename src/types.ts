@@ -1,4 +1,5 @@
 export type TargetAudience = 'both' | 'student' | 'staff';
+export type LinkCategory = 'university' | 'faculty';
 
 export interface Link {
   id: string;
@@ -7,6 +8,7 @@ export interface Link {
   description?: string;
   isStaffOnly: boolean;
   targetAudience?: TargetAudience;
+  category?: LinkCategory;
   clickCount: number;
   createdAt: string;
   thumbnailUrl?: string;

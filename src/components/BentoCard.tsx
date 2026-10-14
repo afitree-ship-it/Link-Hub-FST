@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "../types";
-import { ArrowUpRight, Pin, PinOff, Edit2, Trash2, BarChart2, GraduationCap, Briefcase, Users } from "lucide-react";
+import { ArrowUpRight, Pin, PinOff, Edit2, Trash2, BarChart2, GraduationCap, Briefcase, Users, Building2, FlaskConical } from "lucide-react";
+import { Language } from "../i18n";
 
 export type BentoVariant = "feature" | "wide" | "small";
 
@@ -11,6 +12,7 @@ interface BentoCardProps {
   rank?: number;
   isMyPin: boolean;
   isAdmin: boolean;
+  lang?: Language;
   onTogglePin: (id: string) => void;
   onIncrementClick: (id: string) => void;
   onEdit?: () => void;
@@ -62,20 +64,38 @@ export const SiteIcon: React.FC<{ link: Link; index: number; size: number; radiu
 };
 
 export const BentoCard: React.FC<BentoCardProps> = React.memo(({
-  link, variant, index, rank, isMyPin, isAdmin, onTogglePin, onIncrementClick, onEdit, onDelete,
+  link, variant, index, rank, isMyPin, isAdmin, lang = "th", onTogglePin, onIncrementClick, onEdit, onDelete,
 }) => {
   const [imgFailed, setImgFailed] = useState(false);
   const hasImage = !!link.thumbnailUrl && !imgFailed;
   const dark = variant === "wide";
 
   const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+  const cat = link.category || 'faculty';
+
+  const renderCategoryBadge = () => {
+    if (cat === 'university') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+          <Building2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+          {lang === 'en' ? 'University' : 'มหาวิทยาลัย'}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
+        <FlaskConical className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+        {lang === 'en' ? 'Faculty' : 'คณะวิทย์ฯ'}
+      </span>
+    );
+  };
 
   const renderAudienceBadge = (isDark = false) => {
     if (aud === 'staff') {
       return (
         <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-rose-950/80 text-rose-200 border border-rose-800' : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-200 dark:border-rose-800/60'}`}>
           <Briefcase className="w-3 h-3 text-rose-600 dark:text-rose-400" />
-          เฉพาะบุคลากร
+          {lang === 'en' ? 'Staff Only' : 'เฉพาะบุคลากร'}
         </span>
       );
     }
@@ -83,21 +103,21 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
       return (
         <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-sky-950/80 text-sky-200 border border-sky-800' : 'bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-200 dark:border-sky-800/60'}`}>
           <GraduationCap className="w-3 h-3 text-sky-600 dark:text-sky-400" />
-          เฉพาะนักศึกษา
+          {lang === 'en' ? 'Students' : 'เฉพาะนักศึกษา'}
         </span>
       );
     }
     return (
       <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${isDark ? 'bg-white/10 text-white/90' : 'bg-[#f3f0ef] text-[#5e5558] dark:bg-white/10 dark:text-slate-300'}`}>
         <Users className="w-3 h-3 text-slate-500 dark:text-slate-400" />
-        นักศึกษา & บุคลากร
+        {lang === 'en' ? 'All' : 'นักศึกษา & บุคลากร'}
       </span>
     );
   };
 
   const renderClickStat = (isDark = false) => (
     <span 
-      title="สถิติการเข้าใช้งานแบบเรียลไทม์"
+      title={lang === 'en' ? "Real-time usage stats" : "สถิติการเข้าใช้งานแบบเรียลไทม์"}
       className={`inline-flex items-center gap-1.5 text-[11px] sm:text-[12px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
         isDark ? 'bg-white/15 text-white' : 'bg-[#f3f0ef] text-[#4a4245] dark:bg-white/10 dark:text-slate-200'
       }`}
@@ -107,7 +127,7 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
       </span>
       <BarChart2 className="w-3 h-3 text-[#5c0620] dark:text-rose-400" />
-      <span>เข้าชม {(link.clickCount || 0).toLocaleString()} ครั้ง</span>
+      <span>{lang === 'en' ? `${(link.clickCount || 0).toLocaleString()} views` : `เข้าชม ${(link.clickCount || 0).toLocaleString()} ครั้ง`}</span>
     </span>
   );
 
@@ -116,8 +136,8 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
       type="button"
       onClick={() => onTogglePin(link.id)}
       aria-pressed={isMyPin}
-      aria-label={isMyPin ? `เอา ${link.title} ออกจากหมุดของฉัน` : `ปักหมุด ${link.title}`}
-      title={isMyPin ? "เอาออกจากหมุดของฉัน" : "ปักหมุดไว้ที่ของฉัน"}
+      aria-label={isMyPin ? (lang === 'en' ? `Remove ${link.title} from pins` : `เอา ${link.title} ออกจากหมุดของฉัน`) : (lang === 'en' ? `Pin ${link.title}` : `ปักหมุด ${link.title}`)}
+      title={isMyPin ? (lang === 'en' ? "Remove from my pins" : "เอาออกจากหมุดของฉัน") : (lang === 'en' ? "Pin to my pins" : "ปักหมุดไว้ที่ของฉัน")}
       className={`relative z-10 w-11 h-11 rounded-full flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
         isMyPin
           ? "bg-[#5c0620] text-white"
@@ -133,10 +153,10 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
   const adminButtons = (dark: boolean) => isAdmin && (
     <div className="relative z-10 flex gap-2">
       <button type="button" onClick={onEdit} className={`flex items-center gap-1.5 px-3 min-h-9 rounded-full text-[13px] font-semibold cursor-pointer ${dark ? "bg-white/15 text-white hover:bg-white/25" : "bg-amber-50 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/50"}`}>
-        <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />แก้ไข
+        <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />{lang === 'en' ? 'Edit' : 'แก้ไข'}
       </button>
       <button type="button" onClick={() => onDelete && onDelete(link.id)} className={`flex items-center gap-1.5 px-3 min-h-9 rounded-full text-[13px] font-semibold cursor-pointer ${dark ? "bg-white/15 text-white hover:bg-white/25" : "bg-rose-50 text-rose-800 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-900/50"}`}>
-        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />ลบ
+        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />{lang === 'en' ? 'Delete' : 'ลบ'}
       </button>
     </div>
   );
@@ -168,11 +188,12 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
           {!hasImage && <SiteIcon link={link} index={index} size={48} radius={16} />}
           {mainLink("block",
             <>
-              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                {rank ? (
-                  <span className="whitespace-nowrap text-[12px] font-semibold bg-[#f3f0ef] dark:bg-white/10 text-[#4a4245] dark:text-slate-300 rounded-full px-2.5 py-0.5">ยอดนิยม #{rank}</span>
-                ) : null}
+              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                {renderCategoryBadge()}
                 {renderAudienceBadge(false)}
+                {rank ? (
+                  <span className="whitespace-nowrap text-[12px] font-semibold bg-[#f3f0ef] dark:bg-white/10 text-[#4a4245] dark:text-slate-300 rounded-full px-2.5 py-0.5">{lang === 'en' ? `Top #${rank}` : `ยอดนิยม #${rank}`}</span>
+                ) : null}
               </div>
               <span className="block text-[16px] sm:text-[19px] font-bold leading-snug text-[#1f1a1c] dark:text-white">{link.title}</span>
               {link.description && <span className="mt-1 text-[13px] sm:text-[14px] text-[#5e5558] dark:text-slate-300 leading-relaxed line-clamp-2">{link.description}</span>}
@@ -203,17 +224,18 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
         </div>
         <div className="flex flex-col gap-3 p-4 sm:p-6 justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-2 flex-wrap pr-12">
+            <div className="flex items-center gap-1.5 mb-2 flex-wrap pr-12">
               <span className="inline-flex items-center gap-1 text-[12px] font-semibold bg-[#5c0620] dark:bg-rose-700 text-white rounded-full px-2.5 py-0.5">
-                <Pin className="w-3 h-3" aria-hidden="true" />ปักหมุดโดยคณะ
+                <Pin className="w-3 h-3" aria-hidden="true" />{lang === 'en' ? 'Pinned by Faculty' : 'ปักหมุดโดยคณะ'}
               </span>
+              {renderCategoryBadge()}
               {renderAudienceBadge(false)}
             </div>
             {mainLink("block flex-1 min-w-0 pr-12",
               <>
                 <span className="block text-[18px] sm:text-[22px] font-bold leading-snug text-[#1f1a1c] dark:text-white">{link.title}</span>
                 {link.description && <span className="mt-1.5 text-[13px] sm:text-[15px] text-[#5e5558] dark:text-slate-300 leading-relaxed line-clamp-3">{link.description}</span>}
-                <span className="mt-3 inline-flex items-center gap-1 text-[14px] font-semibold text-[#5c0620] dark:text-rose-400">เปิดเว็บไซต์ <ArrowUpRight className="w-4 h-4" aria-hidden="true" /></span>
+                <span className="mt-3 inline-flex items-center gap-1 text-[14px] font-semibold text-[#5c0620] dark:text-rose-400">{lang === 'en' ? 'Open Website' : 'เปิดเว็บไซต์'} <ArrowUpRight className="w-4 h-4" aria-hidden="true" /></span>
               </>
             )}
           </div>
@@ -241,6 +263,7 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
       <div className="flex-1 flex flex-col gap-2 p-3.5 sm:p-4 justify-between">
         <div>
           <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
+            {renderCategoryBadge()}
             {renderAudienceBadge(false)}
           </div>
           {mainLink("block flex-1 min-w-0",

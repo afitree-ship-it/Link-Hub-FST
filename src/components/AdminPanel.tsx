@@ -5,7 +5,8 @@ import {
   Grid, Link2, CheckCircle2, AlertCircle, RefreshCw, Settings,
   Upload, FileImage, Pin, BarChart3, Bell, Plus, Users, ShieldAlert,
   Lock, Download, Copy, Check, FileJson, GraduationCap, Briefcase,
-  ExternalLink, Eye, EyeOff, UserCheck, Search, TrendingUp, Sparkles, BarChart2
+  ExternalLink, Eye, EyeOff, UserCheck, Search, TrendingUp, Sparkles, BarChart2,
+  Building2, FlaskConical
 } from "lucide-react";
 import { AVAILABLE_ICONS, DynamicIcon } from "./DynamicIcon";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -41,9 +42,9 @@ function initialSetup() {
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow([
-      "ID", "Title", "URL", "Description", "Target Audience", "Click Count", "Created At", "Thumbnail URL", "Is Pinned"
+      "ID", "Title", "URL", "Description", "Target Audience", "Click Count", "Created At", "Thumbnail URL", "Is Pinned", "Category"
     ]);
-    sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+    sheet.getRange(1, 1, 1, 10).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
   }
 
   // 2. ชีต Settings
@@ -86,9 +87,9 @@ function getSheet() {
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow([
-      "ID", "Title", "URL", "Description", "Target Audience", "Click Count", "Created At", "Thumbnail URL", "Is Pinned"
+      "ID", "Title", "URL", "Description", "Target Audience", "Click Count", "Created At", "Thumbnail URL", "Is Pinned", "Category"
     ]);
-    sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+    sheet.getRange(1, 1, 1, 10).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
   }
   return sheet;
 }
@@ -143,12 +144,24 @@ function doGet(e) {
           targetAudience = "both";
         }
 
+        var rawCat = String(row[9] || "").trim().toLowerCase();
+        var category = "faculty";
+        if (rawCat === "university" || rawCat === "uni" || rawCat === "มหาวิทยาลัย") {
+          category = "university";
+        } else if (rawCat === "faculty" || rawCat === "fac" || rawCat === "คณะวิทยาศาสตร์" || rawCat === "คณะ") {
+          category = "faculty";
+        } else {
+          var text = (String(row[2] || "") + " " + String(row[1] || "")).toLowerCase();
+          category = (text.indexOf("scitech") >= 0 || text.indexOf("คณะวิทยาศาสตร์") >= 0 || text.indexOf("petition.") >= 0) ? "faculty" : "university";
+        }
+
         results.push({
           id: String(row[0]),
           title: String(row[1]),
           url: String(row[2]),
           description: String(row[3]),
           targetAudience: targetAudience,
+          category: category,
           isStaffOnly: targetAudience === "staff",
           clickCount: parseInt(row[5] || "0", 10) || 0,
           createdAt: String(row[6]),
@@ -206,13 +219,14 @@ function doPost(e) {
         var links = postData.links;
         var lastRow = sheet.getLastRow();
         if (lastRow > 1) {
-          sheet.getRange(2, 1, lastRow - 1, 9).clearContent();
+          sheet.getRange(2, 1, lastRow - 1, 10).clearContent();
         }
         if (links.length > 0) {
           var rows = [];
           for (var i = 0; i < links.length; i++) {
             var link = links[i];
             var audVal = link.targetAudience === "staff" ? "Staff" : (link.targetAudience === "student" ? "Student" : (link.isStaffOnly ? "Staff" : "Both"));
+            var catVal = link.category === "university" ? "University" : "Faculty";
             rows.push([
               link.id || "",
               link.title || "",
@@ -222,10 +236,11 @@ function doPost(e) {
               link.clickCount || 0,
               link.createdAt || "",
               link.thumbnailUrl || "",
-              link.isPinned ? 'Yes' : 'No'
+              link.isPinned ? 'Yes' : 'No',
+              catVal
             ]);
           }
-          sheet.getRange(2, 1, rows.length, 9).setValues(rows);
+          sheet.getRange(2, 1, rows.length, 10).setValues(rows);
         }
       }
       
@@ -247,7 +262,7 @@ function doPost(e) {
           }
           if (!foundK) {
             settingsSheet.appendRow([kName, val]);
-            sRows.push([kName, val]);
+            sRows.push([kName, val]); 
           }
         }
       }
@@ -258,11 +273,12 @@ function doPost(e) {
     else if (action === "add" || action === "update") {
       var link = postData.link;
       var audVal = link.targetAudience === "staff" ? "Staff" : (link.targetAudience === "student" ? "Student" : (link.isStaffOnly ? "Staff" : "Both"));
+      var catVal = link.category === "university" ? "University" : "Faculty";
       var rows = sheet.getDataRange().getValues();
       var found = false;
       for (var i = 1; i < rows.length; i++) {
         if (String(rows[i][0]) === String(link.id)) {
-          sheet.getRange(i + 1, 1, 1, 9).setValues([[
+          sheet.getRange(i + 1, 1, 1, 10).setValues([[
             link.id || "",
             link.title || "",
             link.url || "",
@@ -271,7 +287,8 @@ function doPost(e) {
             link.clickCount || 0,
             link.createdAt || "",
             link.thumbnailUrl || "",
-            link.isPinned ? 'Yes' : 'No'
+            link.isPinned ? 'Yes' : 'No',
+            catVal
           ]]);
           found = true;
           break;
@@ -287,7 +304,8 @@ function doPost(e) {
           link.clickCount || 0,
           link.createdAt || "",
           link.thumbnailUrl || "",
-          link.isPinned ? 'Yes' : 'No'
+          link.isPinned ? 'Yes' : 'No',
+          catVal
         ]);
       }
       out = { success: true };
@@ -544,7 +562,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [linkTitle, setLinkTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [linkDesc, setLinkDesc] = useState("");
-  const [linkCategory, setLinkCategory] = useState("");
+  const [linkCategory, setLinkCategory] = useState<"university" | "faculty">("faculty");
   const [linkThumbnailUrl, setLinkThumbnailUrl] = useState("");
 
   // Upload, Drag and Paste Image States & Refs
@@ -738,6 +756,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Dashboard Real-time table filter & search
   const [dashboardSearch, setDashboardSearch] = useState("");
   const [dashboardAudienceFilter, setDashboardAudienceFilter] = useState<"all" | "student" | "staff" | "both">("all");
+  const [dashboardCategoryFilter, setDashboardCategoryFilter] = useState<"all" | "university" | "faculty">("all");
 
   // Custom Confirm State
   const [linkToDelete, setLinkToDelete] = useState<{ id: string; title: string } | null>(null);
@@ -906,6 +925,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           url: linkUrl,
           description: linkDesc,
           targetAudience: targetAud,
+          category: linkCategory,
           isStaffOnly: isStaff,
           thumbnailUrl: linkThumbnailUrl,
           isPinned: linkIsPinned,
@@ -918,6 +938,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           url: linkUrl,
           description: linkDesc,
           targetAudience: targetAud,
+          category: linkCategory,
           isStaffOnly: isStaff,
           thumbnailUrl: linkThumbnailUrl,
           isPinned: linkIsPinned,
@@ -928,6 +949,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setLinkTitle("");
       setLinkUrl("");
       setLinkDesc("");
+      setLinkCategory("faculty");
       setLinkTargetAudience("both");
       setLinkIsStaffOnly(false);
       setLinkIsPinned(false);
@@ -1265,6 +1287,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const aud = link.targetAudience || (link.isStaffOnly ? "staff" : "both");
     setLinkTargetAudience(aud);
     setLinkIsStaffOnly(aud === "staff");
+    setLinkCategory(link.category || "faculty");
     setLinkIsPinned(link.isPinned || false);
     setLinkThumbnailUrl(link.thumbnailUrl || "");
     // Scroll to form
@@ -1341,13 +1364,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       if (dashboardAudienceFilter !== "all" && aud !== dashboardAudienceFilter) {
         return false;
       }
+      const cat = link.category || 'faculty';
+      if (dashboardCategoryFilter !== "all" && cat !== dashboardCategoryFilter) {
+        return false;
+      }
       if (dashboardSearch.trim()) {
         const q = dashboardSearch.toLowerCase();
         return link.title.toLowerCase().includes(q) || link.url.toLowerCase().includes(q) || (link.description && link.description.toLowerCase().includes(q));
       }
       return true;
     }).sort((a, b) => (b.clickCount || 0) - (a.clickCount || 0));
-  }, [links, dashboardAudienceFilter, dashboardSearch]);
+  }, [links, dashboardAudienceFilter, dashboardCategoryFilter, dashboardSearch]);
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1615,6 +1642,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20"
                     />
                     <select
+                      value={dashboardCategoryFilter}
+                      onChange={(e) => setDashboardCategoryFilter(e.target.value as any)}
+                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700 dark:text-slate-200 font-medium"
+                    >
+                      <option value="all">ทุกหมวดหมู่ (All)</option>
+                      <option value="university">🏛️ ระบบมหาวิทยาลัย</option>
+                      <option value="faculty">🔬 ระบบคณะวิทยาศาสตร์</option>
+                    </select>
+                    <select
                       value={dashboardAudienceFilter}
                       onChange={(e) => setDashboardAudienceFilter(e.target.value as any)}
                       className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700 dark:text-slate-200"
@@ -1633,8 +1669,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <tr>
                         <th className="p-3 w-12 text-center">#</th>
                         <th className="p-3">ระบบ / ลิงก์</th>
-                        <th className="p-3 w-36">กลุ่มเป้าหมาย</th>
-                        <th className="p-3 w-40 text-right">ยอดเข้าชม (คลิก)</th>
+                        <th className="p-3 w-32">หมวดหมู่</th>
+                        <th className="p-3 w-32">กลุ่มเป้าหมาย</th>
+                        <th className="p-3 w-36 text-right">ยอดเข้าชม (คลิก)</th>
                         <th className="p-3 w-28 text-right">สัดส่วน (% Share)</th>
                         <th className="p-3 w-20 text-center">เปิดดู</th>
                       </tr>
@@ -1642,13 +1679,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                       {dashboardFilteredLinks.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-slate-400">
+                          <td colSpan={7} className="p-8 text-center text-slate-400">
                             ไม่พบข้อมูลลิงก์ที่ตรงกับเงื่อนไขค้นหา
                           </td>
                         </tr>
                       ) : (
                         dashboardFilteredLinks.map((link, idx) => {
                           const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+                          const cat = link.category || 'faculty';
                           const clickShare = totalClicks > 0 ? Math.round(((link.clickCount || 0) / totalClicks) * 100) : 0;
                           return (
                             <tr key={link.id} className="hover:bg-slate-50/70 dark:hover:bg-white/5 transition-colors">
@@ -1666,6 +1704,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               <td className="p-3">
                                 <div className="font-semibold text-slate-800 dark:text-white line-clamp-1">{link.title}</div>
                                 <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-xs">{link.url}</div>
+                              </td>
+                              <td className="p-3">
+                                {cat === 'university' ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 px-2 py-0.5 rounded-full">
+                                    <Building2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                                    มหาวิทยาลัย
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
+                                    <FlaskConical className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                    คณะวิทย์ฯ
+                                  </span>
+                                )}
                               </td>
                               <td className="p-3">
                                 {aud === 'staff' ? (
@@ -1748,6 +1799,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       onChange={(e) => setLinkTitle(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm"
                     />
+                  </div>
+
+                  <div className="space-y-1.5 col-span-1">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">
+                      หมวดหมู่ของระบบ (Category) <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setLinkCategory('university')}
+                        className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                          linkCategory === 'university'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-white dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <Building2 className="w-4 h-4" />
+                        <span>ระบบมหาวิทยาลัย</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setLinkCategory('faculty')}
+                        className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                          linkCategory === 'faculty'
+                            ? 'bg-[#5c0620] text-white border-[#5c0620] shadow-xs'
+                            : 'bg-white dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <FlaskConical className="w-4 h-4" />
+                        <span>ระบบคณะวิทยาศาสตร์</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-1.5 col-span-1">
@@ -2033,6 +2117,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                                   <span className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[250px]">{link.title}</span>
+                                  {cat === 'university' ? (
+                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-full inline-flex items-center gap-1 border border-indigo-200/50 dark:border-indigo-800/40">
+                                      <Building2 className="w-2.5 h-2.5" />
+                                      มหาวิทยาลัย
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 rounded-full inline-flex items-center gap-1 border border-emerald-200/50 dark:border-emerald-800/40">
+                                      <FlaskConical className="w-2.5 h-2.5" />
+                                      คณะวิทย์ฯ
+                                    </span>
+                                  )}
                                   {aud === 'staff' ? (
                                     <span className="px-2 py-0.5 text-[10px] font-semibold text-white bg-[#5c0620] dark:bg-rose-700 rounded-full inline-flex items-center gap-1">
                                       <Briefcase className="w-2.5 h-2.5" />

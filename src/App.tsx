@@ -30,23 +30,99 @@ import {
   Pin,
   Briefcase,
   Sun,
-  Moon
+  Moon,
+  Building2,
+  FlaskConical
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { hashStaffCode, parseStaffCodeHashes } from "./staffCodes";
 import { sendActionToWebApp, getLastWriteAt, WRITE_SETTLE_MS, DEFAULT_GAS_URL, normalizeLink } from "./googleSheets";
+import { Language, getTranslation, autoTranslateThaiToEnglish, ACADEMIC_GLOSSARY } from "./i18n";
 
 export default function App() {
   const [links, setLinks] = useState<Link[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"student" | "staff">("student");
+  const [selectedCategory, setSelectedCategory] = useState<"all" | "university" | "faculty">("all");
   const [staffAccountName, setStaffAccountName] = useState<string>(() => {
     return sessionStorage.getItem("scitech_staff_name") || "";
   });
   const [layoutMode, setLayoutMode] = useState<"grid" | "list" | "compact">("grid");
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Language State (Thai / English with National Flags)
+  const [lang, setLang] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem("scitech_lang");
+      if (saved === "th" || saved === "en") return saved;
+    } catch {}
+    return "th";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("scitech_lang", lang);
+    } catch {}
+  }, [lang]);
+
+  // Translated Links Cache/Map for English Mode
+  const [translatedLinksMap, setTranslatedLinksMap] = useState<Record<string, { title: string; description?: string }>>({});
+
+  useEffect(() => {
+    if (lang !== "en" || links.length === 0) return;
+    let isCancelled = false;
+
+    const translateLinks = async () => {
+      const updates: Record<string, { title: string; description?: string }> = {};
+      let hasNew = false;
+
+      for (const link of links) {
+        if (isCancelled) break;
+        if (translatedLinksMap[link.id]) continue;
+
+        // Check curated glossary first
+        const glossaryTitle = ACADEMIC_GLOSSARY[link.title.trim()];
+        const glossaryDesc = link.description ? ACADEMIC_GLOSSARY[link.description.trim()] : undefined;
+
+        if (glossaryTitle && (!link.description || glossaryDesc !== undefined)) {
+          updates[link.id] = {
+            title: glossaryTitle,
+            description: glossaryDesc || link.description,
+          };
+          hasNew = true;
+        } else {
+          // Asynchronously fetch auto-translation
+          try {
+            const [tTitle, tDesc] = await Promise.all([
+              autoTranslateThaiToEnglish(link.title),
+              link.description ? autoTranslateThaiToEnglish(link.description) : Promise.resolve("")
+            ]);
+            if (!isCancelled) {
+              updates[link.id] = {
+                title: tTitle || link.title,
+                description: tDesc || link.description,
+              };
+              hasNew = true;
+            }
+          } catch (e) {
+            updates[link.id] = { title: link.title, description: link.description };
+          }
+        }
+      }
+
+      if (hasNew && !isCancelled) {
+        setTranslatedLinksMap(prev => ({ ...prev, ...updates }));
+      }
+    };
+
+    translateLinks();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [lang, links, translatedLinksMap]);
 
   // Dark / Light Theme State
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -780,9 +856,46 @@ export default function App() {
     }
   };
 
+  // Display Links: In English mode, dynamic titles and descriptions are automatically translated
+  const displayLinks = useMemo(() => {
+    if (lang === "th") return links;
+    return links.map(link => {
+      const tInfo = translatedLinksMap[link.id];
+      if (tInfo) {
+        return {
+          ...link,
+          title: tInfo.title,
+          description: tInfo.description ?? link.description,
+        };
+      }
+      const glossaryTitle = ACADEMIC_GLOSSARY[link.title.trim()];
+      const glossaryDesc = link.description ? ACADEMIC_GLOSSARY[link.description.trim()] : undefined;
+      return {
+        ...link,
+        title: glossaryTitle || link.title,
+        description: glossaryDesc || link.description,
+      };
+    });
+  }, [links, lang, translatedLinksMap]);
+
+  // Category counts based on viewMode
+  const categoryCounts = useMemo(() => {
+    const available = displayLinks.filter(l => {
+      const aud = l.targetAudience || (l.isStaffOnly ? 'staff' : 'both');
+      if (viewMode === "student" && aud === "staff") return false;
+      if (viewMode === "staff" && aud === "student") return false;
+      return true;
+    });
+    return {
+      all: available.length,
+      university: available.filter(l => (l.category || 'faculty') === 'university').length,
+      faculty: available.filter(l => (l.category || 'faculty') === 'faculty').length,
+    };
+  }, [displayLinks, viewMode]);
+
   // Filtering Logic
   const filteredLinks = useMemo(() => {
-    const filtered = links.filter(link => {
+    const filtered = displayLinks.filter(link => {
       const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
 
       // 1. Audience Filter
@@ -798,11 +911,19 @@ export default function App() {
         }
       }
 
-      // 2. Search Filter
+      // 2. Category Filter
+      const cat = link.category || 'faculty';
+      if (selectedCategory !== "all" && cat !== selectedCategory) {
+        return false;
+      }
+
+      // 3. Search Filter
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
       const matchSearch = 
-        link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (link.description && link.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        link.url.toLowerCase().includes(searchQuery.toLowerCase());
+        link.title.toLowerCase().includes(q) ||
+        (link.description && link.description.toLowerCase().includes(q)) ||
+        link.url.toLowerCase().includes(q);
       
       return matchSearch;
     });
@@ -819,7 +940,7 @@ export default function App() {
       // Then by creation date (newest first, or keep default order)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [links, searchQuery, viewMode, currentUser, isAdmin]);
+  }, [displayLinks, searchQuery, viewMode, selectedCategory, currentUser, isAdmin]);
 
   // Personal pins: kept in this browser only, so every visitor has their own list.
   const [myPins, setMyPins] = useState<string[]>(() => {
@@ -843,7 +964,7 @@ export default function App() {
 
   const myPinnedLinks = useMemo(
     () => myPins
-      .map(id => links.find(l => l.id === id))
+      .map(id => displayLinks.find(l => l.id === id))
       .filter((l): l is Link => {
         if (!l) return false;
         const aud = l.targetAudience || (l.isStaffOnly ? 'staff' : 'both');
@@ -851,7 +972,7 @@ export default function App() {
         if (viewMode === "staff" && aud === "student") return false;
         return true;
       }),
-    [myPins, links, viewMode]
+    [myPins, displayLinks, viewMode]
   );
 
   // Bento order: faculty pins first, then most clicked. Two feature tiles, one wide tile, the rest small.
@@ -902,7 +1023,7 @@ export default function App() {
                 onClick={() => setViewMode("student")}
                 className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer ${viewMode === "student" ? "bg-[#1f1a1c] dark:bg-white text-white dark:text-[#1f1a1c]" : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"}`}
               >
-                นักศึกษา
+                {lang === "en" ? "Students" : "นักศึกษา"}
               </button>
               <button
                 type="button"
@@ -911,18 +1032,50 @@ export default function App() {
                 className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "staff" ? "bg-[#5c0620] text-white" : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"}`}
               >
                 {viewMode !== "staff" && <Lock className="w-3.5 h-3.5" aria-hidden="true" />}
-                <span>บุคลากร</span>
+                <span>{lang === "en" ? "Staff" : "บุคลากร"}</span>
               </button>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Language Switcher with National Flags */}
+            <div role="group" aria-label="เปลี่ยนภาษา / Switch Language" className="flex items-center bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-full p-1 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setLang("th")}
+                aria-pressed={lang === "th"}
+                className={`flex items-center gap-1.5 px-3 min-h-9 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  lang === "th"
+                    ? "bg-[#5c0620] text-white shadow-xs"
+                    : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"
+                }`}
+                title="เปลี่ยนเป็นภาษาไทย (TH)"
+              >
+                <span className="text-sm">🇹🇭</span>
+                <span>TH</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang("en")}
+                aria-pressed={lang === "en"}
+                className={`flex items-center gap-1.5 px-3 min-h-9 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-[#5c0620] text-white shadow-xs"
+                    : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"
+                }`}
+                title="Switch to English (EN) - ระบบแปลอัตโนมัติ"
+              >
+                <span className="text-sm">🇬🇧</span>
+                <span>EN</span>
+              </button>
+            </div>
+
             {/* Dark / Light Mode Toggle */}
             <button
               type="button"
               onClick={toggleTheme}
-              aria-label={theme === "dark" ? "เปลี่ยนเป็นโหมดสว่าง" : "เปลี่ยนเป็นโหมดมืด"}
-              title={theme === "dark" ? "เปลี่ยนเป็นโหมดสว่าง (Light Mode)" : "เปลี่ยนเป็นโหมดมืด (Dark Mode)"}
+              aria-label={theme === "dark" ? (lang === "en" ? "Switch to Light Mode" : "เปลี่ยนเป็นโหมดสว่าง") : (lang === "en" ? "Switch to Dark Mode" : "เปลี่ยนเป็นโหมดมืด")}
+              title={theme === "dark" ? (lang === "en" ? "Switch to Light Mode" : "เปลี่ยนเป็นโหมดสว่าง (Light Mode)") : (lang === "en" ? "Switch to Dark Mode" : "เปลี่ยนเป็นโหมดมืด (Dark Mode)")}
               className="w-11 h-11 rounded-full bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 flex items-center justify-center text-[#4a4245] dark:text-amber-400 hover:text-[#5c0620] dark:hover:text-amber-300 shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95"
             >
               {theme === "dark" ? (
@@ -936,14 +1089,14 @@ export default function App() {
               <div className="flex items-center gap-1 bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-full p-1 shadow-xs">
                 <button type="button" onClick={() => setShowAdminPanel(true)} className="flex items-center gap-1.5 px-4 min-h-10 rounded-full text-sm font-semibold text-[#5c0620] dark:text-rose-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c] cursor-pointer">
                   <Settings className="w-4 h-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">จัดการข้อมูล</span>
+                  <span className="hidden sm:inline">{lang === "en" ? "Admin Panel" : "จัดการข้อมูล"}</span>
                 </button>
-                <button type="button" onClick={handleLogout} aria-label="ออกจากระบบแอดมิน" title="ออกจากระบบแอดมิน" className="w-10 h-10 rounded-full flex items-center justify-center text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c] cursor-pointer">
+                <button type="button" onClick={handleLogout} aria-label={lang === "en" ? "Sign Out" : "ออกจากระบบแอดมิน"} title={lang === "en" ? "Sign Out" : "ออกจากระบบแอดมิน"} className="w-10 h-10 rounded-full flex items-center justify-center text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c] cursor-pointer">
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <button type="button" onClick={() => setShowAdminModal(true)} aria-label="เข้าสู่ระบบผู้ดูแล" title="เข้าสู่ระบบผู้ดูแล" className="w-11 h-11 rounded-full bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 flex items-center justify-center text-[#1f1a1c] dark:text-slate-200 hover:text-[#5c0620] dark:hover:text-rose-400 shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95">
+              <button type="button" onClick={() => setShowAdminModal(true)} aria-label={lang === "en" ? "Admin Login" : "เข้าสู่ระบบผู้ดูแล"} title={lang === "en" ? "Admin Login" : "เข้าสู่ระบบผู้ดูแล"} className="w-11 h-11 rounded-full bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 flex items-center justify-center text-[#1f1a1c] dark:text-slate-200 hover:text-[#5c0620] dark:hover:text-rose-400 shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95">
                 <Settings className="w-5 h-5" />
               </button>
             )}
@@ -959,16 +1112,18 @@ export default function App() {
               </span>
               <div>
                 <div className="font-bold text-sm md:text-[15px] text-slate-800 dark:text-white flex items-center gap-2 flex-wrap">
-                  <span className="text-slate-500 dark:text-slate-400 font-normal">เข้าสู่ระบบในชื่อ:</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-normal">{lang === "en" ? "Signed in as:" : "เข้าสู่ระบบในชื่อ:"}</span>
                   <span className="text-[#5c0620] dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-800/40 px-2.5 py-0.5 rounded-lg font-bold">
-                    {isAdmin ? (currentUser?.username || "ผู้ดูแลระบบ") : (staffAccountName || "บุคลากร")}
+                    {isAdmin ? (currentUser?.username || (lang === "en" ? "Administrator" : "ผู้ดูแลระบบ")) : (staffAccountName || (lang === "en" ? "Staff" : "บุคลากร"))}
                   </span>
                   <span className="text-[11px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md">
-                    โหมดบุคลากร (Staff Portal)
+                    {lang === "en" ? "Staff Portal" : "โหมดบุคลากร (Staff Portal)"}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  แสดงเฉพาะระบบสำหรับบุคลากรและระบบทั่วไป (ซ่อนระบบเฉพาะนักศึกษาอัตโนมัติ) · {filteredLinks.length} รายการที่ตรงกับสิทธิ์
+                  {lang === "en"
+                    ? `Showing staff and general systems (student-only hidden) · ${filteredLinks.length} matching systems`
+                    : `แสดงเฉพาะระบบสำหรับบุคลากรและระบบทั่วไป (ซ่อนระบบเฉพาะนักศึกษาอัตโนมัติ) · ${filteredLinks.length} รายการที่ตรงกับสิทธิ์`}
                 </p>
               </div>
             </div>
@@ -978,10 +1133,10 @@ export default function App() {
                 type="button"
                 onClick={handleStaffLogout}
                 className="px-3.5 py-2 text-xs text-slate-600 dark:text-slate-300 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-white/10 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 font-semibold self-stretch sm:self-auto justify-center"
-                title="ออกจากโหมดบุคลากร"
+                title={lang === "en" ? "Exit Staff Mode" : "ออกจากโหมดบุคลากร"}
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>ออกจากโหมดนี้</span>
+                <span>{lang === "en" ? "Exit Mode" : "ออกจากโหมดนี้"}</span>
               </button>
             </div>
           </div>
@@ -992,22 +1147,26 @@ export default function App() {
           {/* Hero: greeting + search */}
           <div className="col-span-2 bg-[#5c0620] dark:bg-[#480518] text-white rounded-[24px] md:rounded-[28px] p-5 md:p-8 flex flex-col justify-between gap-5 md:gap-7 min-h-[200px] md:min-h-[260px] shadow-sm">
             <div>
-              <div className="text-[13px] md:text-[14px] text-[#f6d9e0] dark:text-rose-200/80">คณะวิทยาศาสตร์และเทคโนโลยี</div>
-              <h1 className="mt-1 text-[26px] md:text-[38px] leading-tight font-bold">วันนี้ต้องใช้ระบบไหน?</h1>
+              <div className="text-[13px] md:text-[14px] text-[#f6d9e0] dark:text-rose-200/80">
+                {lang === "en" ? "Faculty of Science and Technology" : "คณะวิทยาศาสตร์และเทคโนโลยี"}
+              </div>
+              <h1 className="mt-1 text-[26px] md:text-[38px] leading-tight font-bold">
+                {lang === "en" ? "Which system do you need today?" : "วันนี้ต้องใช้ระบบไหน?"}
+              </h1>
             </div>
             <div className="relative">
-              <label htmlFor="link-search" className="sr-only">ค้นหาลิงก์</label>
+              <label htmlFor="link-search" className="sr-only">{lang === "en" ? "Search links" : "ค้นหาลิงก์"}</label>
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5c0620] dark:text-rose-400 pointer-events-none" aria-hidden="true" />
               <input
                 id="link-search"
                 type="search"
-                placeholder="พิมพ์ชื่อระบบ เช่น เกรด, คำร้อง, Wi‑Fi"
+                placeholder={lang === "en" ? "Search systems e.g. Grades, Petitions, Wi-Fi..." : "พิมพ์ชื่อระบบ เช่น เกรด, คำร้อง, Wi‑Fi"}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-12 min-h-[52px] md:min-h-14 bg-white dark:bg-[#1a1418] text-[#1f1a1c] dark:text-white placeholder-[#7a7074] dark:placeholder-slate-400 border border-transparent dark:border-white/10 rounded-2xl text-[16px] focus:outline-none focus:ring-4 focus:ring-white/40"
               />
               {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery("")} aria-label="ล้างคำค้นหา" className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#5e5558] dark:text-slate-400 hover:text-[#1f1a1c] dark:hover:text-white cursor-pointer">
+                <button type="button" onClick={() => setSearchQuery("")} aria-label={lang === "en" ? "Clear search" : "ล้างคำค้นหา"} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#5e5558] dark:text-slate-400 hover:text-[#1f1a1c] dark:hover:text-white cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               )}
@@ -1019,13 +1178,17 @@ export default function App() {
             <div className="flex items-center justify-between gap-2">
               <h2 id="my-pins-title" className="text-[15px] md:text-[16px] font-bold flex items-center gap-2 text-[#1f1a1c] dark:text-white">
                 <Pin className="w-4 h-4 text-[#5c0620] dark:text-rose-400" aria-hidden="true" />
-                หมุดของฉัน
+                {lang === "en" ? "My Pins" : "หมุดของฉัน"}
               </h2>
-              {myPinnedLinks.length > 0 && <span className="text-[13px] text-[#5e5558] dark:text-slate-400">{myPinnedLinks.length} รายการ</span>}
+              {myPinnedLinks.length > 0 && <span className="text-[13px] text-[#5e5558] dark:text-slate-400">{myPinnedLinks.length} {lang === "en" ? "items" : "รายการ"}</span>}
             </div>
             {myPinnedLinks.length === 0 ? (
               <p className="text-[14px] text-[#5e5558] dark:text-slate-400 leading-relaxed">
-                กดปุ่ม <Pin className="inline w-4 h-4 align-[-2px] text-[#5c0620] dark:text-rose-400" aria-label="หมุด" /> บนการ์ดเว็บที่ใช้บ่อย แล้วเว็บนั้นจะมาอยู่ตรงนี้ หมุดเก็บไว้ในเครื่องของคุณเอง คนอื่นไม่เห็น
+                {lang === "en" ? (
+                  <>Click the <Pin className="inline w-4 h-4 align-[-2px] text-[#5c0620] dark:text-rose-400" aria-label="Pin" /> button on frequently used systems to pin them here. Pins are saved on your device only.</>
+                ) : (
+                  <>กดปุ่ม <Pin className="inline w-4 h-4 align-[-2px] text-[#5c0620] dark:text-rose-400" aria-label="หมุด" /> บนการ์ดเว็บที่ใช้บ่อย แล้วเว็บนั้นจะมาอยู่ตรงนี้ หมุดเก็บไว้ในเครื่องของคุณเอง คนอื่นไม่เห็น</>
+                )}
               </p>
             ) : (
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1045,7 +1208,7 @@ export default function App() {
                     >
                       {link.title}
                     </a>
-                    <button type="button" onClick={() => toggleMyPin(link.id)} aria-label={`เอา ${link.title} ออกจากหมุดของฉัน`} title="เอาออก" className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-[#5e5558] dark:text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-white dark:hover:bg-[#1e1b1e] cursor-pointer shrink-0">
+                    <button type="button" onClick={() => toggleMyPin(link.id)} aria-label={lang === "en" ? `Remove ${link.title} from pins` : `เอา ${link.title} ออกจากหมุดของฉัน`} title={lang === "en" ? "Remove" : "เอาออก"} className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-[#5e5558] dark:text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-white dark:hover:bg-[#1e1b1e] cursor-pointer shrink-0">
                       <X className="w-4 h-4" />
                     </button>
                   </li>
@@ -1054,25 +1217,93 @@ export default function App() {
             )}
           </section>
 
+          {/* Category Filter Bar */}
+          <div className="col-span-2 lg:col-span-4 flex items-center justify-between gap-3 flex-wrap pt-1 pb-1">
+            <div role="group" aria-label="หมวดหมู่ของระบบ" className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("all")}
+                aria-pressed={selectedCategory === "all"}
+                className={`px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                  selectedCategory === "all"
+                    ? "bg-[#1f1a1c] dark:bg-white text-white dark:text-[#1f1a1c] shadow-xs"
+                    : "bg-white dark:bg-[#1e1b1e] text-[#5e5558] dark:text-slate-300 hover:bg-[#eae5e3] dark:hover:bg-[#2c272c] border border-transparent dark:border-white/10"
+                }`}
+              >
+                <Globe className="w-4 h-4" />
+                <span>{lang === "en" ? "All Systems" : "ทั้งหมด"}</span>
+                <span className={`text-[11px] px-2 py-0.5 rounded-full ${selectedCategory === "all" ? "bg-white/20 dark:bg-black/20 text-white dark:text-slate-900" : "bg-black/5 dark:bg-white/10 text-slate-600 dark:text-slate-300"}`}>
+                  {categoryCounts.all}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("university")}
+                aria-pressed={selectedCategory === "university"}
+                className={`px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                  selectedCategory === "university"
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "bg-white dark:bg-[#1e1b1e] text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-transparent dark:border-white/10"
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span>{lang === "en" ? "University Systems" : "ระบบสำหรับมหาวิทยาลัย"}</span>
+                <span className={`text-[11px] px-2 py-0.5 rounded-full ${selectedCategory === "university" ? "bg-white/20 text-white" : "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300"}`}>
+                  {categoryCounts.university}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("faculty")}
+                aria-pressed={selectedCategory === "faculty"}
+                className={`px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                  selectedCategory === "faculty"
+                    ? "bg-[#5c0620] text-white shadow-xs"
+                    : "bg-white dark:bg-[#1e1b1e] text-[#5c0620] dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent dark:border-white/10"
+                }`}
+              >
+                <FlaskConical className="w-4 h-4" />
+                <span>{lang === "en" ? "Faculty Systems" : "ระบบสำหรับคณะวิทยาศาสตร์"}</span>
+                <span className={`text-[11px] px-2 py-0.5 rounded-full ${selectedCategory === "faculty" ? "bg-white/20 text-white" : "bg-rose-50 dark:bg-rose-950/40 text-[#5c0620] dark:text-rose-300"}`}>
+                  {categoryCounts.faculty}
+                </span>
+              </button>
+            </div>
+
+            <div className="text-xs text-[#5e5558] dark:text-slate-400 font-medium hidden sm:block">
+              {filteredLinks.length} {lang === "en" ? "systems available" : "ระบบที่พร้อมใช้งาน"}
+            </div>
+          </div>
+
           {searchQuery && (
             <p className="col-span-2 lg:col-span-4 text-[14px] text-[#4a4245] dark:text-slate-300 px-1 pt-2" aria-live="polite">
-              ผลการค้นหา “<strong className="text-[#5c0620] dark:text-rose-400">{searchQuery}</strong>” {filteredLinks.length} รายการ
+              {lang === "en" ? "Search results for “" : "ผลการค้นหา “"}
+              <strong className="text-[#5c0620] dark:text-rose-400">{searchQuery}</strong>
+              {lang === "en" ? `” (${filteredLinks.length} items)` : `” ${filteredLinks.length} รายการ`}
             </p>
           )}
 
           {loading ? (
             <div className="col-span-2 lg:col-span-4 py-20 text-center bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-[28px]">
               <Loader2 className="w-9 h-9 animate-spin text-[#5c0620] dark:text-rose-400 mx-auto" />
-              <p className="mt-3 text-sm text-[#5e5558] dark:text-slate-400">กำลังโหลดลิงก์...</p>
+              <p className="mt-3 text-sm text-[#5e5558] dark:text-slate-400">
+                {lang === "en" ? "Loading systems..." : "กำลังโหลดลิงก์..."}
+              </p>
             </div>
           ) : filteredLinks.length === 0 ? (
             <div className="col-span-2 lg:col-span-4 py-16 px-6 text-center bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-[28px] space-y-3">
               <Globe className="w-11 h-11 text-[#c9c1c4] dark:text-slate-600 mx-auto" aria-hidden="true" />
-              <h2 className="font-bold text-[17px] text-[#1f1a1c] dark:text-white">ไม่พบลิงก์ที่ตรงกับคำค้นหา</h2>
-              <p className="text-[14px] text-[#5e5558] dark:text-slate-400">ลองใช้คำอื่น หรือดูลิงก์ทั้งหมด</p>
+              <h2 className="font-bold text-[17px] text-[#1f1a1c] dark:text-white">
+                {lang === "en" ? "No systems found matching your search" : "ไม่พบลิงก์ที่ตรงกับคำค้นหา"}
+              </h2>
+              <p className="text-[14px] text-[#5e5558] dark:text-slate-400">
+                {lang === "en" ? "Try different keywords or view all systems" : "ลองใช้คำอื่น หรือดูลิงก์ทั้งหมด"}
+              </p>
               {searchQuery && (
                 <button type="button" onClick={() => setSearchQuery("")} className="text-sm font-semibold bg-[#1f1a1c] dark:bg-white text-white dark:text-[#1f1a1c] px-5 min-h-11 rounded-full cursor-pointer hover:opacity-90">
-                  ดูลิงก์ทั้งหมด
+                  {lang === "en" ? "View all systems" : "ดูลิงก์ทั้งหมด"}
                 </button>
               )}
             </div>
@@ -1086,6 +1317,7 @@ export default function App() {
                 index={links.indexOf(link)}
                 isMyPin={myPins.includes(link.id)}
                 isAdmin={isAdmin}
+                lang={lang}
                 onTogglePin={toggleMyPin}
                 onIncrementClick={handleIncrementClick}
                 onEdit={() => setShowAdminPanel(true)}
@@ -1104,20 +1336,28 @@ export default function App() {
           <div className="space-y-3.5">
             <div className="flex items-center gap-2.5 text-slate-800 dark:text-white">
               <GraduationCap className="w-6 h-6 text-[#5c0620] dark:text-rose-400" />
-              <span className="font-extrabold text-base tracking-tight">คณะวิทยาศาสตร์และเทคโนโลยี</span>
+              <span className="font-extrabold text-base tracking-tight">
+                {lang === "en" ? "Faculty of Science and Technology" : "คณะวิทยาศาสตร์และเทคโนโลยี"}
+              </span>
             </div>
             <p className="text-xs leading-relaxed font-medium text-slate-500 dark:text-slate-400">
-              มุ่งเน้นการสร้างสรรค์องค์ความรู้ งานวิจัย และพัฒนากำลังคนด้านวิทยาศาสตร์ ไอที และเทคโนโลยี เพื่อการพัฒนาสังคมและเศรษฐกิจที่ยั่งยืน
+              {lang === "en"
+                ? "Dedicated to cultivating knowledge, research excellence, and technological workforce in science, IT, and emerging innovations for sustainable society and progress."
+                : "มุ่งเน้นการสร้างสรรค์องค์ความรู้ งานวิจัย และพัฒนากำลังคนด้านวิทยาศาสตร์ ไอที และเทคโนโลยี เพื่อการพัฒนาสังคมและเศรษฐกิจที่ยั่งยืน"}
             </p>
           </div>
 
           {/* Col 2: Contact Info */}
           <div className="space-y-3.5">
-            <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight">ช่องทางการติดต่อคณะ</h4>
+            <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight">
+              {lang === "en" ? "Contact Information" : "ช่องทางการติดต่อคณะ"}
+            </h4>
             <ul className="text-xs space-y-3 font-medium text-slate-500 dark:text-slate-400">
               <li className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#5c0620] dark:text-rose-400 shrink-0" />
-                <span>อาคารคณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยฟัตตอนี</span>
+                <span>
+                  {lang === "en" ? "Faculty of Science and Technology Building, Fatoni University" : "อาคารคณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยฟัตตอนี"}
+                </span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#5c0620] dark:text-rose-400 shrink-0" />
@@ -1128,9 +1368,13 @@ export default function App() {
 
           {/* Col 3: Disclaimer & System info */}
           <div className="space-y-3.5">
-            <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight">ผู้ดูแลระบบและจัดการข้อมูล</h4>
+            <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight">
+              {lang === "en" ? "Administration & Portal Management" : "ผู้ดูแลระบบและจัดการข้อมูล"}
+            </h4>
             <p className="text-xs leading-relaxed font-medium text-slate-500 dark:text-slate-400 mb-4">
-              เข้าสู่ระบบหลังบ้านเพื่อจัดการพอร์ทัลลิงก์ สำหรับเจ้าหน้าที่และบุคลากร
+              {lang === "en"
+                ? "Access backend console to manage links, users, categories, and real-time statistics."
+                : "เข้าสู่ระบบหลังบ้านเพื่อจัดการพอร์ทัลลิงก์ สำหรับเจ้าหน้าที่และบุคลากร"}
             </p>
             {isAdmin ? (
               <button
@@ -1138,14 +1382,14 @@ export default function App() {
                 className="text-xs bg-[#5c0620] hover:bg-[#881337] text-white font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>เปิดแผงควบคุมระบบ (Admin Control)</span>
+                <span>{lang === "en" ? "Open Admin Control Panel" : "เปิดแผงควบคุมระบบ (Admin Control)"}</span>
               </button>
             ) : (
               <button
                 onClick={() => setShowAdminModal(true)}
                 className="text-xs bg-white dark:bg-[#252125] hover:bg-slate-50 dark:hover:bg-[#302a30] hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 shadow-sm text-slate-600 dark:text-slate-300 font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
               >
-                เข้าสู่หลังบ้านแอดมิน
+                {lang === "en" ? "Admin Login" : "เข้าสู่หลังบ้านแอดมิน"}
               </button>
             )}
           </div>
@@ -1193,25 +1437,39 @@ export default function App() {
               <div className="w-12 h-12 bg-white dark:bg-[#2a252a] text-[#5c0620] dark:text-rose-400 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-white dark:border-white/10">
                 <Lock className="w-6 h-6 text-[#5c0620] dark:text-rose-400" />
               </div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">เข้าสู่ระบบ (Admin Login)</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">กรุณาเข้าสู่ระบบเพื่อจัดการพอร์ทัลลิงก์</p>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+                {lang === "en" ? "Administrator Sign In" : "เข้าสู่ระบบ (Admin Login)"}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {lang === "en" ? "Sign in to manage the link portal" : "กรุณาเข้าสู่ระบบเพื่อจัดการพอร์ทัลลิงก์"}
+              </p>
             </div>
 
             {/* Info notice about default password */}
             <div className="p-3 bg-white/60 dark:bg-white/5 rounded-xl border border-white dark:border-white/10 shadow-sm text-[11px] text-slate-600 dark:text-slate-300 flex gap-2">
               <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#5c0620] dark:text-rose-400" />
               <div>
-                <strong>สำหรับเริ่มต้นใช้งาน:</strong> ผู้ดูแลระบบหลัก (Super Admin) ใช้ชื่อผู้ใช้ <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin</code> และรหัสผ่าน <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin1234</code>
+                {lang === "en" ? (
+                  <>
+                    <strong>Initial Setup:</strong> Super Admin username is <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin</code> and default password is <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin1234</code>
+                  </>
+                ) : (
+                  <>
+                    <strong>สำหรับเริ่มต้นใช้งาน:</strong> ผู้ดูแลระบบหลัก (Super Admin) ใช้ชื่อผู้ใช้ <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin</code> และรหัสผ่าน <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin1234</code>
+                  </>
+                )}
               </div>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">ชื่อผู้ใช้งาน (Username)</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  {lang === "en" ? "Username" : "ชื่อผู้ใช้งาน (Username)"}
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="ป้อน Username"
+                  placeholder={lang === "en" ? "Enter Username" : "ป้อน Username"}
                   value={loginUsername}
                   onChange={(e) => setLoginUsername(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 shadow-inner bg-white dark:bg-[#292429] focus:outline-hidden focus:ring-4 focus:ring-[#5c0620]/20 focus:border-[#5c0620]/40 text-sm text-slate-800 dark:text-white placeholder-slate-400 transition-all"
@@ -1220,11 +1478,13 @@ export default function App() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">รหัสผ่าน (Password)</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  {lang === "en" ? "Password" : "รหัสผ่าน (Password)"}
+                </label>
                 <input
                   type="password"
                   required
-                  placeholder="ป้อนรหัสผ่าน"
+                  placeholder={lang === "en" ? "Enter Password" : "ป้อนรหัสผ่าน"}
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 shadow-inner bg-white dark:bg-[#292429] focus:outline-hidden focus:ring-4 focus:ring-[#5c0620]/20 focus:border-[#5c0620]/40 text-sm font-mono text-slate-800 dark:text-white placeholder-slate-400 transition-all"
@@ -1244,7 +1504,7 @@ export default function App() {
                   onClick={() => setShowAdminModal(false)}
                   className="flex-1 py-2.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
-                  ยกเลิก
+                  {lang === "en" ? "Cancel" : "ยกเลิก"}
                 </button>
                 <button
                   type="submit"
@@ -1254,11 +1514,11 @@ export default function App() {
                   {isLoggingIn ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>กำลังเข้าสู่ระบบ</span>
+                      <span>{lang === "en" ? "Signing In..." : "กำลังเข้าสู่ระบบ"}</span>
                     </>
                   ) : (
                     <>
-                      เข้าสู่ระบบ
+                      {lang === "en" ? "Sign In" : "เข้าสู่ระบบ"}
                     </>
                   )}
                 </button>
@@ -1276,16 +1536,22 @@ export default function App() {
               <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center rounded-2xl mb-4">
                 <ShieldAlert className="w-6 h-6 text-rose-500" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white text-center">เข้าใช้งานหมวดหมู่บุคลากร</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2 px-4">กรอกรหัสที่ได้รับจากแอดมินของคณะ</p>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white text-center">
+                {lang === "en" ? "Staff Access Portal" : "เข้าใช้งานหมวดหมู่บุคลากร"}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2 px-4">
+                {lang === "en" ? "Enter the staff passcode provided by faculty admins" : "กรอกรหัสที่ได้รับจากแอดมินของคณะ"}
+              </p>
             </div>
             <form onSubmit={handleStaffLogin} className="space-y-4">
               <div>
-                <label htmlFor="staff-password" className="sr-only">รหัสบุคลากร</label>
+                <label htmlFor="staff-password" className="sr-only">
+                  {lang === "en" ? "Staff Passcode" : "รหัสบุคลากร"}
+                </label>
                 <input
                   id="staff-password"
                   type="password"
-                  placeholder="รหัสบุคลากร"
+                  placeholder={lang === "en" ? "Staff Passcode" : "รหัสบุคลากร"}
                   autoComplete="current-password"
                   autoFocus
                   value={staffPasswordInput}
@@ -1302,14 +1568,16 @@ export default function App() {
                   onClick={() => setShowStaffModal(false)}
                   className="flex-1 py-2.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
-                  ยกเลิก
+                  {lang === "en" ? "Cancel" : "ยกเลิก"}
                 </button>
                 <button
                   type="submit"
                   disabled={isStaffChecking}
                   className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white shadow-sm text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-60"
                 >
-                  {isStaffChecking ? "กำลังตรวจสอบ..." : "เข้าสู่ระบบ"}
+                  {isStaffChecking
+                    ? (lang === "en" ? "Checking..." : "กำลังตรวจสอบ...")
+                    : (lang === "en" ? "Sign In" : "เข้าสู่ระบบ")}
                 </button>
               </div>
             </form>

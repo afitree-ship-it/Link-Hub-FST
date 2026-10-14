@@ -63,7 +63,7 @@ export const updateSheetData = async (spreadsheetId: string, values: any[][]) =>
   const metaData = await metaResponse.json();
   const firstSheetTitle = metaData.sheets[0]?.properties?.title || 'Sheet1';
 
-  const response = await fetch(`${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(firstSheetTitle)}!A1:I?valueInputOption=USER_ENTERED`, {
+  const response = await fetch(`${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(firstSheetTitle)}!A1:J?valueInputOption=USER_ENTERED`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -92,12 +92,30 @@ export const normalizeLink = (raw: any): Link => {
     targetAudience = 'both';
   }
 
+  // Normalize Category (university | faculty)
+  const rawCat = String(raw.category || (raw[9] !== undefined ? raw[9] : '')).trim().toLowerCase();
+  let category: 'university' | 'faculty' = 'faculty';
+  if (rawCat === 'university' || rawCat === 'uni' || rawCat === 'มหาวิทยาลัย') {
+    category = 'university';
+  } else if (rawCat === 'faculty' || rawCat === 'fac' || rawCat === 'คณะวิทยาศาสตร์' || rawCat === 'คณะ') {
+    category = 'faculty';
+  } else {
+    // Intelligent fallback based on URL or title
+    const textToCheck = `${raw.url || raw[2] || ''} ${raw.title || raw[1] || ''}`.toLowerCase();
+    if (textToCheck.includes('scitech') || textToCheck.includes('คณะวิทยาศาสตร์') || textToCheck.includes('คณะฯ') || textToCheck.includes('petition.')) {
+      category = 'faculty';
+    } else {
+      category = 'university';
+    }
+  }
+
   return {
     id: String(raw.id || raw[0] || crypto.randomUUID()),
     title: String(raw.title || raw[1] || ''),
     url: String(raw.url || raw[2] || ''),
     description: String(raw.description !== undefined ? raw.description : (raw[3] || '')),
     targetAudience,
+    category,
     isStaffOnly: targetAudience === 'staff',
     clickCount: parseInt(raw.clickCount !== undefined ? raw.clickCount : (raw[5] || '0'), 10) || 0,
     createdAt: String(raw.createdAt || raw[6] || new Date().toISOString()),
@@ -107,9 +125,10 @@ export const normalizeLink = (raw: any): Link => {
 };
 
 export const syncLinksToGoogleSheet = async (spreadsheetId: string, links: Link[]) => {
-  const headers = ['ID', 'Title', 'URL', 'Description', 'Is Staff Only', 'Click Count', 'Created At', 'Thumbnail URL', 'Is Pinned'];
+  const headers = ['ID', 'Title', 'URL', 'Description', 'Target Audience', 'Click Count', 'Created At', 'Thumbnail URL', 'Is Pinned', 'Category'];
   const rows = links.map(link => {
     const audienceValue = link.targetAudience === 'staff' ? 'Staff' : (link.targetAudience === 'student' ? 'Student' : (link.isStaffOnly ? 'Staff' : 'Both'));
+    const categoryValue = link.category === 'university' ? 'University' : 'Faculty';
     return [
       link.id,
       link.title,
@@ -119,7 +138,8 @@ export const syncLinksToGoogleSheet = async (spreadsheetId: string, links: Link[
       link.clickCount.toString(),
       link.createdAt,
       link.thumbnailUrl || '',
-      link.isPinned ? 'Yes' : 'No'
+      link.isPinned ? 'Yes' : 'No',
+      categoryValue
     ];
   });
 
@@ -227,7 +247,7 @@ export const loadLinksFromGoogleSheet = async (spreadsheetId: string): Promise<L
   const metaData = await metaResponse.json();
   const firstSheetTitle = metaData.sheets[0]?.properties?.title || 'Sheet1';
 
-  const response = await fetch(`${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(firstSheetTitle)}!A2:I`, {
+  const response = await fetch(`${SHEETS_API}/${spreadsheetId}/values/${encodeURIComponent(firstSheetTitle)}!A2:J`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
