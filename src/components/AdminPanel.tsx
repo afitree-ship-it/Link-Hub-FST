@@ -1113,13 +1113,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  const handleRemoveStaffPassword = async (itemToRemove: StaffPasswordItem) => {
+  const handleRemoveStaffPassword = async (itemToRemove: StaffPasswordItem | string) => {
     setIsSubmitting(true);
     try {
-      const updatedItems = staffPasswordItems.filter(i => i.id !== itemToRemove.id && i.code !== itemToRemove.code);
+      const codeToRemove = typeof itemToRemove === "string" ? itemToRemove : itemToRemove.code;
+      const idToRemove = typeof itemToRemove === "string" ? "" : itemToRemove.id;
+      const updatedItems = staffPasswordItems.filter(i => (idToRemove ? i.id !== idToRemove : true) && i.code !== codeToRemove);
       const remainingCodes = updatedItems.map(i => i.code);
       const { hashStaffCode } = await import('../staffCodes');
-      const removedHash = await hashStaffCode(itemToRemove.code);
+      const removedHash = await hashStaffCode(codeToRemove);
       const updatedHashes = (adminConfig.staffCodeHashes || []).filter(h => h !== removedHash);
 
       setStaffPasswords(remainingCodes);
@@ -1140,7 +1142,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         }, authCreds);
       }
 
-      showAlert(`ลบบัญชี "${itemToRemove.label}" เรียบร้อยแล้ว`);
+      const labelToRemove = typeof itemToRemove === "string" ? itemToRemove : (itemToRemove.label || itemToRemove.code);
+      showAlert(`ลบรหัส "${labelToRemove}" เรียบร้อยแล้ว`);
     } catch (err) {
       showAlert("เกิดข้อผิดพลาดในการลบบัญชีบุคลากร", "error");
     } finally {
@@ -2102,6 +2105,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-[400px] overflow-y-auto">
                       {links.map((link) => {
                         const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+                        const cat = link.category || 'faculty';
                         return (
                           <div key={link.id} className="p-4 flex items-start justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
                             <div className="min-w-0 flex-1 flex gap-3">
