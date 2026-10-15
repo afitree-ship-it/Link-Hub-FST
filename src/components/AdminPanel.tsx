@@ -1933,7 +1933,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           {/* TAB 1: MANAGE LINKS */}
           {activeTab === "links" && (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start pb-24">
               
               {/* Left Column: Bento Card - Add / Edit Link Form */}
               <div className="xl:col-span-5 xl:sticky xl:top-2 self-start">
@@ -2299,26 +2299,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Reordering Guide Pill */}
-                  <div className="bg-rose-50/70 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs text-[#5c0620] dark:text-rose-300 font-medium flex-wrap gap-2">
+                  {/* Reordering Guide Bar - Clean & Minimalist */}
+                  <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-medium flex-wrap gap-2">
                     <span className="flex items-center gap-2">
-                      <GripVertical className="w-4 h-4 shrink-0" />
-                      <span><strong>วิธีโยกย้าย:</strong> คลิกค้างที่ปุ่ม <strong>⠿</strong> แล้วลากสลับตำแหน่ง หรือกดปุ่ม <strong>⬆️ ⬇️</strong> เพื่อเลื่อนขึ้น/ลงทีละขั้น</span>
+                      <GripVertical className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span><strong>วิธีจัดลำดับ:</strong> ลากสลับตำแหน่งที่ปุ่ม <strong>⠿</strong> หรือกดปุ่ม <strong>⬆️ ⬇️</strong> เพื่อเลื่อนขึ้น/ลงทีละขั้น</span>
                     </span>
-                    <span className="text-[11px] font-bold bg-white/80 dark:bg-black/30 px-2 py-0.5 rounded-lg border border-rose-200/60 dark:border-rose-800/40">
+                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/40">
                       Auto-sync
                     </span>
                   </div>
 
-                  {/* Links Scrollable Container */}
-                  <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden bg-white dark:bg-[#1a171a]">
+                  {/* Links List - Clean Bento Cards (No nested scroll trap, flows naturally with page) */}
+                  <div>
                     {displayedOrderedLinks.length === 0 ? (
-                      <div className="p-12 text-center text-slate-400 space-y-2">
+                      <div className="bg-white dark:bg-[#1a171a] p-12 text-center text-slate-400 rounded-3xl border border-slate-200/80 dark:border-white/10 space-y-2">
                         <Info className="w-8 h-8 mx-auto opacity-40" />
                         <p className="text-sm font-semibold">ไม่พบรายการลิงก์ที่ตรงกับคำค้นหาหรือเงื่อนไข</p>
                       </div>
                     ) : (
-                      <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-[580px] overflow-y-auto">
+                      <div className="space-y-3">
                         {displayedOrderedLinks.map((link) => {
                           const originalIndex = orderedLinks.findIndex(l => l.id === link.id);
                           const isFirst = originalIndex === 0;
@@ -2333,60 +2333,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               key={link.id}
                               onDragOver={(e) => handleLinkDragOver(e, originalIndex)}
                               onDrop={(e) => handleLinkDrop(e, originalIndex)}
-                              className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-all ${
+                              className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
                                 isBeingDragged
-                                  ? "opacity-30 bg-slate-100 dark:bg-white/10"
+                                  ? "opacity-30 bg-slate-100 dark:bg-white/10 border-dashed border-slate-300"
                                   : isTargetDrag
-                                  ? "border-t-2 border-[#5c0620] dark:border-rose-500 bg-rose-50/50 dark:bg-rose-950/30"
-                                  : "hover:bg-slate-50/80 dark:hover:bg-white/5"
+                                  ? "border-2 border-[#5c0620] dark:border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 shadow-md scale-[1.01]"
+                                  : "bg-white dark:bg-[#1e1b1e] border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 hover:shadow-xs"
                               }`}
                             >
-                              <div className="min-w-0 flex-1 flex items-center gap-3">
-                                {/* Reorder Controls: Large Drag Handle + Big Up/Down Buttons */}
+                              {/* Left & Middle Info */}
+                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                {/* Drag Handle */}
                                 {currentUser?.role === "superadmin" && (
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    {/* Drag Handle */}
-                                    <div
-                                      draggable
-                                      onDragStart={(e) => handleLinkDragStart(e, originalIndex)}
-                                      onDragEnd={handleLinkDragEnd}
-                                      className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-white/10 cursor-grab active:cursor-grabbing transition-colors select-none"
-                                      title="คลิกค้างแล้วลากเพื่อสลับลำดับ"
-                                    >
-                                      <GripVertical className="w-5 h-5" />
-                                    </div>
-
-                                    {/* Up / Down Buttons */}
-                                    <div className="flex flex-col gap-0.5">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleMoveLink(originalIndex, originalIndex - 1)}
-                                        disabled={isFirst || isSavingOrder}
-                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition-colors disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                                        title="เลื่อนขึ้น 1 อันดับ"
-                                      >
-                                        <ChevronUp className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleMoveLink(originalIndex, originalIndex + 1)}
-                                        disabled={isLast || isSavingOrder}
-                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition-colors disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                                        title="เลื่อนลง 1 อันดับ"
-                                      >
-                                        <ChevronDown className="w-4 h-4" />
-                                      </button>
-                                    </div>
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => handleLinkDragStart(e, originalIndex)}
+                                    onDragEnd={handleLinkDragEnd}
+                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 cursor-grab active:cursor-grabbing transition-colors shrink-0 select-none"
+                                    title="คลิกค้างแล้วลากเพื่อสลับลำดับ"
+                                  >
+                                    <GripVertical className="w-5 h-5" />
                                   </div>
                                 )}
 
-                                {/* Order Badge */}
-                                <span className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-xs flex items-center justify-center shrink-0 font-mono shadow-2xs">
+                                {/* Order Number Badge */}
+                                <span className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-mono font-bold text-xs flex items-center justify-center shrink-0">
                                   #{originalIndex + 1}
                                 </span>
 
                                 {/* Thumbnail preview */}
-                                <div className="w-14 h-10 rounded-xl bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-200 dark:border-white/10 hidden sm:block">
+                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-200/80 dark:border-white/10 shadow-2xs">
                                   <img 
                                     src={link.thumbnailUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=100&auto=format&fit=crop"} 
                                     alt="" 
@@ -2395,49 +2371,91 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   />
                                 </div>
 
-                                <div className="min-w-0 flex-1 space-y-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate max-w-[220px] sm:max-w-xs">{link.title}</span>
-                                    
+                                {/* Title & Clear Metadata Row */}
+                                <div className="min-w-0 flex-1 space-y-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base leading-snug truncate">
+                                      {link.title}
+                                    </h5>
+                                    {link.isPinned && (
+                                      <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[10px] font-bold shrink-0">
+                                        📌 ปักหมุด
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {/* Category Pill */}
                                     {cat === 'university' ? (
-                                      <span className="px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-full inline-flex items-center gap-1 border border-indigo-200/60 dark:border-indigo-800/40">
-                                        <Building2 className="w-2.5 h-2.5" />
+                                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-full inline-flex items-center gap-1 border border-indigo-200/60 dark:border-indigo-800/40">
+                                        <Building2 className="w-3 h-3" />
                                         มหาวิทยาลัย
                                       </span>
                                     ) : (
-                                      <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 rounded-full inline-flex items-center gap-1 border border-emerald-200/60 dark:border-emerald-800/40">
-                                        <FlaskConical className="w-2.5 h-2.5" />
+                                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 rounded-full inline-flex items-center gap-1 border border-emerald-200/60 dark:border-emerald-800/40">
+                                        <FlaskConical className="w-3 h-3" />
                                         คณะวิทย์ฯ
                                       </span>
                                     )}
 
+                                    {/* Audience Pill */}
                                     {aud === 'staff' ? (
-                                      <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#5c0620] dark:bg-rose-700 rounded-full inline-flex items-center gap-1">
-                                        <Briefcase className="w-2.5 h-2.5" />
+                                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#5c0620] dark:bg-rose-700 rounded-full inline-flex items-center gap-1">
+                                        <Briefcase className="w-3 h-3" />
                                         เฉพาะบุคลากร
                                       </span>
                                     ) : aud === 'student' ? (
-                                      <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-sky-600 rounded-full inline-flex items-center gap-1">
-                                        <GraduationCap className="w-2.5 h-2.5" />
+                                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-sky-600 rounded-full inline-flex items-center gap-1">
+                                        <GraduationCap className="w-3 h-3" />
                                         เฉพาะนักศึกษา
                                       </span>
                                     ) : (
-                                      <span className="px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-white/10 rounded-full inline-flex items-center gap-1">
-                                        <Users className="w-2.5 h-2.5" />
+                                      <span className="px-2.5 py-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/10 rounded-full inline-flex items-center gap-1">
+                                        <Users className="w-3 h-3 text-slate-500" />
                                         ทั้ง 2 กลุ่ม
                                       </span>
                                     )}
 
-                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-semibold">
-                                      ({link.clickCount || 0} คลิก)
+                                    {/* Click Count */}
+                                    <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-medium">
+                                      · {link.clickCount || 0} คลิก
+                                    </span>
+
+                                    {/* URL */}
+                                    <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-[200px] sm:max-w-xs hidden lg:inline-block">
+                                      · {link.url}
                                     </span>
                                   </div>
-                                  <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">{link.url}</p>
                                 </div>
                               </div>
 
-                              {/* Action Buttons: Pin, Edit, Delete (Large Tactile Buttons) */}
-                              <div className="flex items-center gap-1.5 shrink-0">
+                              {/* Right: Reorder & Action Buttons */}
+                              <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-white/5 w-full md:w-auto justify-end">
+                                {/* Up / Down Buttons */}
+                                {currentUser?.role === "superadmin" && (
+                                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-slate-200/60 dark:border-white/10 mr-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveLink(originalIndex, originalIndex - 1)}
+                                      disabled={isFirst || isSavingOrder}
+                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                                      title="เลื่อนขึ้น 1 อันดับ"
+                                    >
+                                      <ChevronUp className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveLink(originalIndex, originalIndex + 1)}
+                                      disabled={isLast || isSavingOrder}
+                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                                      title="เลื่อนลง 1 อันดับ"
+                                    >
+                                      <ChevronDown className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+
+                                {/* Pin Button */}
                                 <button
                                   type="button"
                                   onClick={() => togglePinStatus(link)}
@@ -2453,14 +2471,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 
                                 {currentUser?.role === "superadmin" && (
                                   <>
+                                    {/* Edit Button */}
                                     <button
                                       type="button"
-                                      onClick={() => startEditLink(link)}
+                                      onClick={() => {
+                                        startEditLink(link);
+                                        document.getElementById("link-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                      }}
                                       className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200/70 dark:border-amber-800/50 transition-all cursor-pointer shadow-2xs"
                                       title="แก้ไขข้อมูลลิงก์"
                                     >
                                       <Edit2 className="w-4 h-4" />
                                     </button>
+
+                                    {/* Delete Button */}
                                     <button
                                       type="button"
                                       onClick={() => setLinkToDelete({ id: link.id, title: link.title })}
