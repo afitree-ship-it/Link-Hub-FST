@@ -1375,20 +1375,20 @@ export default function App() {
 
           {/* Category Filter Bar */}
           <div className="col-span-2 lg:col-span-4 flex items-center justify-between gap-3 flex-wrap pt-1 pb-1">
-            <div role="group" aria-label="หมวดหมู่ของระบบ" className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none w-full sm:w-auto">
+            <div role="group" aria-label="หมวดหมู่ของระบบ" className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-1 scrollbar-none w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setSelectedCategory("all")}
                 aria-pressed={selectedCategory === "all"}
-                className={`px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                className={`px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs md:text-sm font-bold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
                   selectedCategory === "all"
                     ? "bg-[#1f1a1c] dark:bg-white text-white dark:text-[#1f1a1c] shadow-xs"
                     : "bg-white dark:bg-[#1e1b1e] text-[#5e5558] dark:text-slate-300 hover:bg-[#eae5e3] dark:hover:bg-[#2c272c] border border-transparent dark:border-white/10"
                 }`}
               >
-                <Globe className="w-4 h-4" />
-                <span>{lang === "en" ? "All Systems" : "ทั้งหมด"}</span>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full ${selectedCategory === "all" ? "bg-white/20 dark:bg-black/20 text-white dark:text-slate-900" : "bg-black/5 dark:bg-white/10 text-slate-600 dark:text-slate-300"}`}>
+                <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span>{lang === "en" ? "All" : "ทั้งหมด"}</span>
+                <span className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full ${selectedCategory === "all" ? "bg-white/20 dark:bg-black/20 text-white dark:text-slate-900" : "bg-black/5 dark:bg-white/10 text-slate-600 dark:text-slate-300"}`}>
                   {categoryCounts.all}
                 </span>
               </button>
@@ -1397,15 +1397,18 @@ export default function App() {
                 type="button"
                 onClick={() => setSelectedCategory("university")}
                 aria-pressed={selectedCategory === "university"}
-                className={`px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                className={`px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs md:text-sm font-bold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
                   selectedCategory === "university"
                     ? "bg-indigo-600 text-white shadow-xs"
                     : "bg-white dark:bg-[#1e1b1e] text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-transparent dark:border-white/10"
                 }`}
               >
-                <Building2 className="w-4 h-4" />
-                <span>{lang === "en" ? "University Systems" : "ระบบสำหรับมหาวิทยาลัย"}</span>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full ${selectedCategory === "university" ? "bg-white/20 text-white" : "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300"}`}>
+                <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span>
+                  <span className="inline sm:hidden">{lang === "en" ? "University" : "มหาวิทยาลัย"}</span>
+                  <span className="hidden sm:inline">{lang === "en" ? "University Systems" : "ระบบสำหรับมหาวิทยาลัย"}</span>
+                </span>
+                <span className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full ${selectedCategory === "university" ? "bg-white/20 text-white" : "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300"}`}>
                   {categoryCounts.university}
                 </span>
               </button>
@@ -1414,15 +1417,18 @@ export default function App() {
                 type="button"
                 onClick={() => setSelectedCategory("faculty")}
                 aria-pressed={selectedCategory === "faculty"}
-                className={`px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                className={`px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs md:text-sm font-bold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
                   selectedCategory === "faculty"
                     ? "bg-[#5c0620] text-white shadow-xs"
                     : "bg-white dark:bg-[#1e1b1e] text-[#5c0620] dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent dark:border-white/10"
                 }`}
               >
-                <FlaskConical className="w-4 h-4" />
-                <span>{lang === "en" ? "Faculty Systems" : "ระบบสำหรับคณะวิทยาศาสตร์"}</span>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full ${selectedCategory === "faculty" ? "bg-white/20 text-white" : "bg-rose-50 dark:bg-rose-950/40 text-[#5c0620] dark:text-rose-300"}`}>
+                <FlaskConical className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span>
+                  <span className="inline sm:hidden">{lang === "en" ? "Faculty" : "คณะวิทย์ฯ"}</span>
+                  <span className="hidden sm:inline">{lang === "en" ? "Faculty Systems" : "ระบบสำหรับคณะวิทยาศาสตร์"}</span>
+                </span>
+                <span className={`text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full ${selectedCategory === "faculty" ? "bg-white/20 text-white" : "bg-rose-50 dark:bg-rose-950/40 text-[#5c0620] dark:text-rose-300"}`}>
                   {categoryCounts.faculty}
                 </span>
               </button>
@@ -1486,43 +1492,36 @@ export default function App() {
 
       {/* 3. APP FOOTER */}
       <footer className="bg-white dark:bg-[#161416] text-slate-600 dark:text-slate-400 mt-6 md:mt-10 border-t border-[#e4dfdd] dark:border-white/10 relative z-10 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 md:py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-12 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16">
           
-          {/* Col 1: About Faculty */}
+          {/* Contact Info */}
           <div className="space-y-3.5">
-            <div className="flex items-center gap-2.5 text-slate-800 dark:text-white">
-              <GraduationCap className="w-6 h-6 text-[#5c0620] dark:text-rose-400" />
-              <span className="font-extrabold text-base tracking-tight">
-                {lang === "en" ? "Faculty of Science and Technology" : "คณะวิทยาศาสตร์และเทคโนโลยี"}
-              </span>
-            </div>
-            <p className="text-xs leading-relaxed font-medium text-slate-500 dark:text-slate-400">
-              {lang === "en"
-                ? "Dedicated to cultivating knowledge, research excellence, and technological workforce in science, IT, and emerging innovations for sustainable society and progress."
-                : "มุ่งเน้นการสร้างสรรค์องค์ความรู้ งานวิจัย และพัฒนากำลังคนด้านวิทยาศาสตร์ ไอที และเทคโนโลยี เพื่อการพัฒนาสังคมและเศรษฐกิจที่ยั่งยืน"}
-            </p>
-          </div>
-
-          {/* Col 2: Contact Info */}
-          <div className="space-y-3.5">
-            <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight">
-              {lang === "en" ? "Contact Information" : "ช่องทางการติดต่อคณะ"}
+            <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
+              <span>{lang === "en" ? "Contact Information" : "ช่องทางการติดต่อคณะ"}</span>
             </h4>
-            <ul className="text-xs space-y-3 font-medium text-slate-500 dark:text-slate-400">
-              <li className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#5c0620] dark:text-rose-400 shrink-0" />
-                <span>
-                  {lang === "en" ? "Faculty of Science and Technology Building, Fatoni University" : "อาคารคณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยฟัตตอนี"}
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#5c0620] dark:text-rose-400 shrink-0" />
-                <span>scitech@ftu.ac.th</span>
-              </li>
-            </ul>
+            <div className="text-xs space-y-2 font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="font-bold text-slate-800 dark:text-white text-[13px]">
+                {lang === "en" ? "Faculty of Science and Technology, Fatoni University" : "คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยฟาฏอนี"}
+              </p>
+              <p className="text-slate-500 dark:text-slate-400">
+                {lang === "en"
+                  ? "Pattani Campus (Khao Tum Sub-district, Yarang District, Pattani Province)"
+                  : "ตั้งอยู่ที่วิทยาเขตปัตตานี (ตำบลเขาตูม อำเภอยะรัง จังหวัดปัตตานี)"}
+              </p>
+              <p className="text-slate-500 dark:text-slate-400">
+                {lang === "en"
+                  ? "Address: 135/8 Moo 3, Khao Tum Sub-district, Yarang District, Pattani Province 94160"
+                  : "ที่อยู่: 135/8 หมู่ที่ 3 ตำบลเขาตูม อำเภอยะรัง จังหวัดปัตตานี 94160"}
+              </p>
+              <div className="pt-1 flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <Mail className="w-3.5 h-3.5 text-[#5c0620] dark:text-rose-400 shrink-0" />
+                <a href="mailto:scitech@ftu.ac.th" className="hover:text-[#5c0620] dark:hover:text-rose-300 transition-colors font-medium">scitech@ftu.ac.th</a>
+              </div>
+            </div>
           </div>
 
-          {/* Col 3: Disclaimer & System info */}
+          {/* Administration & Portal Management */}
           <div className="space-y-3.5">
             <h4 className="text-slate-800 dark:text-white font-bold text-sm tracking-tight">
               {lang === "en" ? "Administration & Portal Management" : "ผู้ดูแลระบบและจัดการข้อมูล"}
