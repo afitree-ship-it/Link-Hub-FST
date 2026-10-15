@@ -1658,8 +1658,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         </div>
 
-        {/* Modal Content Area (Scrollable) */}
-        <div className="flex-1 p-6 overflow-y-auto bg-slate-50/50 dark:bg-[#121113]">
+        {/* Modal Content Area (Independent scroll for links tab) */}
+        <div className={`flex-1 p-4 sm:p-6 bg-slate-50/50 dark:bg-[#121113] min-h-0 ${
+          activeTab === "links" ? "xl:overflow-hidden overflow-y-auto flex flex-col" : "overflow-y-auto"
+        }`}>
           
           {/* TAB 0: DASHBOARD */}
           {activeTab === "dashboard" && (
@@ -1931,22 +1933,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           )}
 
-          {/* TAB 1: MANAGE LINKS */}
+          {/* TAB 1: MANAGE LINKS (Independent Dual-Column Scroll) */}
           {activeTab === "links" && (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start pb-24">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 sm:gap-6 items-stretch xl:h-full xl:min-h-0 flex-1">
               
-              {/* Left Column: Bento Card - Add / Edit Link Form */}
-              <div className="xl:col-span-5 xl:sticky xl:top-2 self-start">
+              {/* Left Column: Bento Card - Add / Edit Link Form (Compact, Ergonomic & Independent Scroll) */}
+              <div className="xl:col-span-5 xl:h-full xl:min-h-0 flex flex-col">
                 {currentUser?.role === "superadmin" ? (
-                  <div id="link-form" className="bg-white dark:bg-[#1a171a] p-6 sm:p-7 rounded-[28px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10 flex-wrap gap-2">
+                  <div id="link-form" className="bg-white dark:bg-[#1a171a] p-5 sm:p-6 rounded-[28px] border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col xl:h-full xl:min-h-0">
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10 shrink-0">
                       <div className="flex items-center gap-2.5">
                         <div className="w-2.5 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
                         <div>
                           <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
                             {editingLinkId ? "แก้ไขข้อมูลลิงก์" : "เพิ่มลิงก์แนะนำใหม่"}
                           </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
                             {editingLinkId ? "แก้ไขรายละเอียดแล้วกดบันทึก" : "กรอกข้อมูลและตั้งค่าลิงก์เข้าสู่พอร์ทัล"}
                           </p>
                         </div>
@@ -1964,178 +1967,164 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             setLinkTargetAudience('both');
                             setLinkThumbnailUrl("");
                           }}
-                          className="px-3 py-1.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                          className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
                         >
                           ยกเลิกแก้ไข
                         </button>
                       )}
                     </div>
 
-                    <form onSubmit={handleLinkSubmit} className="space-y-4">
-                      {/* Title */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                          ชื่อระบบ / หัวข้อลิงก์ <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="เช่น ระบบบริการการศึกษา (REG)"
-                          value={linkTitle}
-                          onChange={(e) => setLinkTitle(e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-semibold transition-all"
-                        />
-                      </div>
-
-                      {/* Category Selection (Bento Chips) */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                          หมวดหมู่ของระบบ (Category) <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setLinkCategory('university')}
-                            className={`min-h-[46px] p-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                              linkCategory === 'university'
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
-                            }`}
-                          >
-                            <Building2 className="w-4 h-4 shrink-0" />
-                            <span>ระบบมหาวิทยาลัย</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setLinkCategory('faculty')}
-                            className={`min-h-[46px] p-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                              linkCategory === 'faculty'
-                                ? 'bg-[#5c0620] text-white border-[#5c0620] shadow-sm'
-                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
-                            }`}
-                          >
-                            <FlaskConical className="w-4 h-4 shrink-0" />
-                            <span>ระบบคณะวิทยาศาสตร์</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Target Audience (Bento Chips) */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                          กลุ่มเป้าหมายการแสดงผล (Target Audience) <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="grid grid-cols-3 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setLinkTargetAudience('both');
-                              setLinkIsStaffOnly(false);
-                            }}
-                            className={`p-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
-                              linkTargetAudience === 'both'
-                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs'
-                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
-                            }`}
-                          >
-                            <Users className="w-4 h-4" />
-                            <span>ทั้ง 2 กลุ่ม</span>
-                            <span className="text-[10px] font-normal opacity-80">นักศึกษา & บุคลากร</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setLinkTargetAudience('student');
-                              setLinkIsStaffOnly(false);
-                            }}
-                            className={`p-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
-                              linkTargetAudience === 'student'
-                                ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
-                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
-                            }`}
-                          >
-                            <GraduationCap className="w-4 h-4" />
-                            <span>แค่นักศึกษา</span>
-                            <span className="text-[10px] font-normal opacity-80">ซ่อนจากบุคลากร</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setLinkTargetAudience('staff');
-                              setLinkIsStaffOnly(true);
-                            }}
-                            className={`p-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
-                              linkTargetAudience === 'staff'
-                                ? 'bg-[#5c0620] text-white border-[#5c0620] shadow-xs'
-                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
-                            }`}
-                          >
-                            <Briefcase className="w-4 h-4" />
-                            <span>แค่บุคลากร</span>
-                            <span className="text-[10px] font-normal opacity-80">ซ่อนจากนักศึกษา</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Pin to Top Toggle */}
-                      <div>
-                        <label className="flex items-center gap-3 cursor-pointer p-3 border border-slate-200 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 w-full transition-colors bg-slate-50/30 dark:bg-[#252125]">
+                    {/* Scrollable Form Body */}
+                    <form onSubmit={handleLinkSubmit} className="flex-1 xl:overflow-y-auto xl:min-h-0 pr-1 space-y-3.5 pt-3">
+                      {/* Row 1: Title & URL */}
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                            <span>ชื่อระบบ / หัวข้อลิงก์ <span className="text-rose-500">*</span></span>
+                          </label>
                           <input
-                            type="checkbox"
-                            checked={linkIsPinned}
-                            onChange={(e) => setLinkIsPinned(e.target.checked)}
-                            className="w-4 h-4 text-[#5c0620] bg-white border-slate-300 rounded focus:ring-[#5c0620]"
+                            type="text"
+                            required
+                            placeholder="เช่น ระบบบริการการศึกษา (REG)"
+                            value={linkTitle}
+                            onChange={(e) => setLinkTitle(e.target.value)}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-xs sm:text-sm font-semibold transition-all"
                           />
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                            <Pin className="w-4 h-4 text-rose-500" />
-                            <span>ปักหมุดไว้บนสุด (Pin to Top เป็นการ์ดขนาดใหญ่)</span>
-                          </span>
-                        </label>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                            <span>ที่อยู่เว็บไซต์ (URL) <span className="text-rose-500">*</span></span>
+                          </label>
+                          <input
+                            type="url"
+                            required
+                            placeholder="เช่น https://reg.ftu.ac.th"
+                            value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-xs sm:text-sm font-mono transition-all"
+                          />
+                        </div>
                       </div>
 
-                      {/* URL */}
+                      {/* Row 2: Category & Target Audience */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {/* Category */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                            หมวดหมู่ <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-[#252125] rounded-xl border border-slate-200/60 dark:border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => setLinkCategory('university')}
+                              className={`py-1.5 px-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                                linkCategory === 'university'
+                                  ? 'bg-indigo-600 text-white shadow-2xs'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                            >
+                              <Building2 className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate">มหาลัย</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setLinkCategory('faculty')}
+                              className={`py-1.5 px-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                                linkCategory === 'faculty'
+                                  ? 'bg-[#5c0620] text-white shadow-2xs'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                            >
+                              <FlaskConical className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate">คณะวิทย์ฯ</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Audience */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                            กลุ่มเป้าหมาย <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-[#252125] rounded-xl border border-slate-200/60 dark:border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLinkTargetAudience('both');
+                                setLinkIsStaffOnly(false);
+                              }}
+                              className={`py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                                linkTargetAudience === 'both'
+                                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-2xs'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                              title="ทั้ง 2 กลุ่ม (นักศึกษา & บุคลากร)"
+                            >
+                              <Users className="w-3 h-3 shrink-0" />
+                              <span>ทุกคน</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLinkTargetAudience('student');
+                                setLinkIsStaffOnly(false);
+                              }}
+                              className={`py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                                linkTargetAudience === 'student'
+                                  ? 'bg-sky-600 text-white shadow-2xs'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                              title="เฉพาะนักศึกษา (ซ่อนจากบุคลากร)"
+                            >
+                              <GraduationCap className="w-3 h-3 shrink-0" />
+                              <span>นศ.</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLinkTargetAudience('staff');
+                                setLinkIsStaffOnly(true);
+                              }}
+                              className={`py-1.5 px-1 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                                linkTargetAudience === 'staff'
+                                  ? 'bg-[#5c0620] text-white shadow-2xs'
+                                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                              }`}
+                              title="เฉพาะบุคลากร (ซ่อนจากนักศึกษา)"
+                            >
+                              <Briefcase className="w-3 h-3 shrink-0" />
+                              <span>บุคลากร</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Compact Image Uploader & Thumbnail Preview + Inline Pin to Top */}
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                          ที่อยู่เว็บไซต์ (URL) <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="url"
-                          required
-                          placeholder="เช่น https://reg.ftu.ac.th"
-                          value={linkUrl}
-                          onChange={(e) => setLinkUrl(e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono transition-all"
-                        />
-                      </div>
-
-                      {/* Description */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                          คำอธิบายย่อ (เพื่อให้นักศึกษาเข้าใจง่ายขึ้น)
-                        </label>
-                        <textarea
-                          rows={2}
-                          placeholder="เช่น ใช้สำหรับลงทะเบียนเรียน เพิ่ม-ถอนรายวิชา และตรวจสอบผลการเรียน"
-                          value={linkDesc}
-                          onChange={(e) => setLinkDesc(e.target.value)}
-                          className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm transition-all"
-                        />
-                      </div>
-
-                      {/* Thumbnail Image section with Upload, Drop & Paste (Ctrl+V) support */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between flex-wrap gap-2">
-                          <span className="flex items-center gap-1.5">
-                            <FileImage className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <FileImage className="w-3.5 h-3.5 text-[#5c0620] dark:text-rose-400" />
                             <span>รูปภาพประกอบลิงก์ (Thumbnail)</span>
-                          </span>
-                          <span className="text-[10px] bg-rose-50 dark:bg-rose-950/60 text-[#5c0620] dark:text-rose-300 px-2 py-0.5 rounded-md font-bold border border-rose-200/50 dark:border-rose-800/40">
-                            ขนาดแนะนำ 16:10 (Auto-crop)
-                          </span>
-                        </label>
+                          </label>
+
+                          {/* Pin Checkbox Inline */}
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 select-none">
+                            <input
+                              type="checkbox"
+                              checked={linkIsPinned}
+                              onChange={(e) => setLinkIsPinned(e.target.checked)}
+                              className="w-3.5 h-3.5 text-[#5c0620] rounded border-slate-300"
+                            />
+                            <span className="flex items-center gap-1 text-[11px] font-bold">
+                              <Pin className="w-3 h-3 text-rose-500" />
+                              ปักหมุดบนสุด
+                            </span>
+                          </label>
+                        </div>
 
                         {/* Hidden File Input */}
                         <input
@@ -2150,69 +2139,86 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           className="hidden"
                         />
 
-                        {/* Interactive Drop & Paste target */}
+                        {/* Compact Drop & Upload Bar */}
                         <div
                           onDragOver={handleImageDragOver}
                           onDragLeave={handleImageDragLeave}
                           onDrop={handleImageDrop}
                           onClick={() => fileInputRef.current?.click()}
-                          className={`h-[120px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-2.5 text-center cursor-pointer transition-all ${
+                          className={`min-h-[58px] px-3.5 py-2 rounded-xl border border-dashed flex items-center justify-between gap-3 cursor-pointer transition-all ${
                             isDragging
                               ? "border-[#5c0620] bg-rose-50/70 dark:bg-rose-950/40"
-                              : linkThumbnailUrl && linkThumbnailUrl.startsWith("data:image")
-                              ? "border-rose-300 bg-white dark:bg-[#252125]"
-                              : "border-slate-200 dark:border-white/10 hover:border-[#5c0620] hover:bg-rose-50/40 bg-slate-50/50 dark:bg-[#252125]"
+                              : linkThumbnailUrl
+                              ? "border-slate-300 dark:border-white/20 bg-slate-50/50 dark:bg-[#252125]"
+                              : "border-slate-300 dark:border-white/10 hover:border-[#5c0620] bg-slate-50/30 dark:bg-[#252125]"
                           }`}
                         >
                           {isProcessingImage ? (
-                            <div className="space-y-1.5">
-                              <RefreshCw className="w-5 h-5 animate-spin text-[#5c0620] dark:text-rose-400 mx-auto" />
-                              <p className="text-[10px] text-slate-500 font-bold">กำลังปรับขนาดรูป...</p>
+                            <div className="flex items-center gap-2 mx-auto text-xs text-slate-500 font-bold">
+                              <RefreshCw className="w-4 h-4 animate-spin text-[#5c0620] dark:text-rose-400" />
+                              <span>กำลังประมวลผลรูป...</span>
                             </div>
                           ) : linkThumbnailUrl ? (
-                            <div className="relative w-full h-full group/thumb rounded-xl overflow-hidden shadow-2xs">
-                              <img
-                                src={linkThumbnailUrl}
-                                alt="Thumbnail Preview"
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
-                                <span className="text-[10px] text-white bg-[#5c0620]/90 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1.5">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <span>คลิกเพื่อเปลี่ยนรูป</span>
-                                </span>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <img
+                                  src={linkThumbnailUrl}
+                                  alt="Preview"
+                                  referrerPolicy="no-referrer"
+                                  className="w-12 h-9 object-cover rounded-lg border border-slate-200 dark:border-white/10 shadow-2xs shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">
+                                    มีรูปภาพประกอบแล้ว
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">คลิกเปลี่ยนรูป หรือกด Ctrl+V วางใหม่</span>
+                                </div>
                               </div>
-                              
-                              {/* Clear button */}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setLinkThumbnailUrl("");
                                 }}
-                                className="absolute top-1.5 right-1.5 p-1 bg-white/95 hover:bg-rose-50 text-rose-900 rounded-full shadow-xs hover:scale-105 transition-all cursor-pointer"
+                                className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 transition-colors cursor-pointer"
                                 title="ลบภาพประกอบ"
                               >
-                                <X className="w-3.5 h-3.5" />
+                                <X className="w-4 h-4" />
                               </button>
                             </div>
                           ) : (
-                            <div className="space-y-1">
-                              <Upload className="w-5 h-5 text-slate-400 mx-auto" />
-                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">คลิกเพื่อเลือกไฟล์ หรือ ลากวาง</p>
-                              <p className="text-[10px] text-slate-400">หรือกด <kbd className="bg-white dark:bg-black/30 px-1 py-0.5 rounded border border-slate-200 dark:border-white/10 font-mono text-[9px]">Ctrl + V</kbd> เพื่อวางภาพที่คัดลอกมา</p>
+                            <div className="flex items-center justify-between w-full text-xs text-slate-500 dark:text-slate-400">
+                              <div className="flex items-center gap-2">
+                                <Upload className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span>คลิกเลือกรูปภาพ หรือลากวาง</span>
+                                <span className="text-[10px] font-mono bg-white dark:bg-black/30 px-1 py-0.5 rounded border border-slate-200 dark:border-white/10 hidden sm:inline">Ctrl+V</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400">16:10</span>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Submit button */}
-                      <div className="pt-2">
+                      {/* Row 4: Description */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          คำอธิบายย่อ (ไม่บังคับ)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="เช่น สำหรับลงทะเบียนเรียน เพิ่ม-ถอนรายวิชา และตรวจผลการเรียน"
+                          value={linkDesc}
+                          onChange={(e) => setLinkDesc(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-xs transition-all"
+                        />
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="pt-1.5 pb-1">
                         <button
                           type="submit"
                           disabled={isSubmitting}
-                          className="w-full min-h-[50px] bg-[#5c0620] hover:bg-[#780829] text-white text-sm font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-[#5c0620]/20 disabled:opacity-50 cursor-pointer active:scale-98"
+                          className="w-full min-h-[44px] bg-[#5c0620] hover:bg-[#780829] active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-[#5c0620]/20 disabled:opacity-50 cursor-pointer"
                         >
                           {isSubmitting ? (
                             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -2233,18 +2239,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 )}
               </div>
 
-              {/* Right Column: Bento Card - Existing Links List & Reordering Controls */}
-              <div className="xl:col-span-7">
-                <div className="bg-white dark:bg-[#1a171a] p-6 sm:p-7 rounded-[28px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
+              {/* Right Column: Bento Card - Existing Links List (Independent Scroll) */}
+              <div className="xl:col-span-7 xl:h-full xl:min-h-0 flex flex-col">
+                <div className="bg-white dark:bg-[#1a171a] p-5 sm:p-6 rounded-[28px] border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col xl:h-full xl:min-h-0">
                   
-                  {/* List Header & Controls */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-white/10">
+                  {/* List Header & Controls (shrink-0) */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-white/10 shrink-0">
                     <div className="flex items-center gap-2.5">
                       <div className="w-2.5 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
                       <div>
                         <h4 className="font-extrabold text-slate-900 dark:text-white text-base flex items-center gap-2">
                           <span>รายการลิงก์ในระบบทั้งหมด</span>
-                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2.5 py-0.5 rounded-full font-mono">
                             {orderedLinks.length}
                           </span>
                         </h4>
@@ -2299,207 +2305,205 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Reordering Guide Bar - Clean & Minimalist */}
-                  <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-medium flex-wrap gap-2">
+                  {/* Reordering Guide Bar (shrink-0) */}
+                  <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 px-3.5 py-2 rounded-xl flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-medium flex-wrap gap-2 shrink-0 my-1">
                     <span className="flex items-center gap-2">
-                      <GripVertical className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span><strong>วิธีจัดลำดับ:</strong> ลากสลับตำแหน่งที่ปุ่ม <strong>⠿</strong> หรือกดปุ่ม <strong>⬆️ ⬇️</strong> เพื่อเลื่อนขึ้น/ลงทีละขั้น</span>
+                      <GripVertical className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span><strong>วิธีจัดลำดับ:</strong> ลากสลับตำแหน่งที่ปุ่ม <strong>⠿</strong> หรือกดปุ่ม <strong>⬆️ ⬇️</strong> เพื่อเลื่อนขึ้น/ลง</span>
                     </span>
                     <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/40">
                       Auto-sync
                     </span>
                   </div>
 
-                  {/* Links List - Clean Bento Cards (No nested scroll trap, flows naturally with page) */}
-                  <div>
+                  {/* Independent Scrollable Links List */}
+                  <div className="flex-1 xl:overflow-y-auto xl:min-h-0 pr-1 pt-1 space-y-2.5 pb-4">
                     {displayedOrderedLinks.length === 0 ? (
                       <div className="bg-white dark:bg-[#1a171a] p-12 text-center text-slate-400 rounded-3xl border border-slate-200/80 dark:border-white/10 space-y-2">
                         <Info className="w-8 h-8 mx-auto opacity-40" />
                         <p className="text-sm font-semibold">ไม่พบรายการลิงก์ที่ตรงกับคำค้นหาหรือเงื่อนไข</p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {displayedOrderedLinks.map((link) => {
-                          const originalIndex = orderedLinks.findIndex(l => l.id === link.id);
-                          const isFirst = originalIndex === 0;
-                          const isLast = originalIndex === orderedLinks.length - 1;
-                          const isBeingDragged = draggedIndex === originalIndex;
-                          const isTargetDrag = dragOverIndex === originalIndex;
-                          const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
-                          const cat = link.category || 'faculty';
+                      displayedOrderedLinks.map((link) => {
+                        const originalIndex = orderedLinks.findIndex(l => l.id === link.id);
+                        const isFirst = originalIndex === 0;
+                        const isLast = originalIndex === orderedLinks.length - 1;
+                        const isBeingDragged = draggedIndex === originalIndex;
+                        const isTargetDrag = dragOverIndex === originalIndex;
+                        const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+                        const cat = link.category || 'faculty';
 
-                          return (
-                            <div
-                              key={link.id}
-                              onDragOver={(e) => handleLinkDragOver(e, originalIndex)}
-                              onDrop={(e) => handleLinkDrop(e, originalIndex)}
-                              className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                                isBeingDragged
-                                  ? "opacity-30 bg-slate-100 dark:bg-white/10 border-dashed border-slate-300"
-                                  : isTargetDrag
-                                  ? "border-2 border-[#5c0620] dark:border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 shadow-md scale-[1.01]"
-                                  : "bg-white dark:bg-[#1e1b1e] border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 hover:shadow-xs"
-                              }`}
-                            >
-                              {/* Left & Middle Info */}
-                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                {/* Drag Handle */}
-                                {currentUser?.role === "superadmin" && (
-                                  <div
-                                    draggable
-                                    onDragStart={(e) => handleLinkDragStart(e, originalIndex)}
-                                    onDragEnd={handleLinkDragEnd}
-                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 cursor-grab active:cursor-grabbing transition-colors shrink-0 select-none"
-                                    title="คลิกค้างแล้วลากเพื่อสลับลำดับ"
-                                  >
-                                    <GripVertical className="w-5 h-5" />
-                                  </div>
-                                )}
-
-                                {/* Order Number Badge */}
-                                <span className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-mono font-bold text-xs flex items-center justify-center shrink-0">
-                                  #{originalIndex + 1}
-                                </span>
-
-                                {/* Thumbnail preview */}
-                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-200/80 dark:border-white/10 shadow-2xs">
-                                  <img 
-                                    src={link.thumbnailUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=100&auto=format&fit=crop"} 
-                                    alt="" 
-                                    referrerPolicy="no-referrer"
-                                    className="w-full h-full object-cover"
-                                  />
+                        return (
+                          <div
+                            key={link.id}
+                            onDragOver={(e) => handleLinkDragOver(e, originalIndex)}
+                            onDrop={(e) => handleLinkDrop(e, originalIndex)}
+                            className={`p-3.5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3.5 ${
+                              isBeingDragged
+                                ? "opacity-30 bg-slate-100 dark:bg-white/10 border-dashed border-slate-300"
+                                : isTargetDrag
+                                ? "border-2 border-[#5c0620] dark:border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 shadow-md scale-[1.01]"
+                                : "bg-white dark:bg-[#1e1b1e] border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 hover:shadow-xs"
+                            }`}
+                          >
+                            {/* Left & Middle Info */}
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              {/* Drag Handle */}
+                              {currentUser?.role === "superadmin" && (
+                                <div
+                                  draggable
+                                  onDragStart={(e) => handleLinkDragStart(e, originalIndex)}
+                                  onDragEnd={handleLinkDragEnd}
+                                  className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 cursor-grab active:cursor-grabbing transition-colors shrink-0 select-none"
+                                  title="คลิกค้างแล้วลากเพื่อสลับลำดับ"
+                                >
+                                  <GripVertical className="w-4 h-4" />
                                 </div>
+                              )}
 
-                                {/* Title & Clear Metadata Row */}
-                                <div className="min-w-0 flex-1 space-y-1.5">
-                                  <div className="flex items-center gap-2">
-                                    <h5 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base leading-snug truncate">
-                                      {link.title}
-                                    </h5>
-                                    {link.isPinned && (
-                                      <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[10px] font-bold shrink-0">
-                                        📌 ปักหมุด
-                                      </span>
-                                    )}
-                                  </div>
+                              {/* Order Number Badge */}
+                              <span className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                                #{originalIndex + 1}
+                              </span>
 
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    {/* Category Pill */}
-                                    {cat === 'university' ? (
-                                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-full inline-flex items-center gap-1 border border-indigo-200/60 dark:border-indigo-800/40">
-                                        <Building2 className="w-3 h-3" />
-                                        มหาวิทยาลัย
-                                      </span>
-                                    ) : (
-                                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 rounded-full inline-flex items-center gap-1 border border-emerald-200/60 dark:border-emerald-800/40">
-                                        <FlaskConical className="w-3 h-3" />
-                                        คณะวิทย์ฯ
-                                      </span>
-                                    )}
-
-                                    {/* Audience Pill */}
-                                    {aud === 'staff' ? (
-                                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#5c0620] dark:bg-rose-700 rounded-full inline-flex items-center gap-1">
-                                        <Briefcase className="w-3 h-3" />
-                                        เฉพาะบุคลากร
-                                      </span>
-                                    ) : aud === 'student' ? (
-                                      <span className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-sky-600 rounded-full inline-flex items-center gap-1">
-                                        <GraduationCap className="w-3 h-3" />
-                                        เฉพาะนักศึกษา
-                                      </span>
-                                    ) : (
-                                      <span className="px-2.5 py-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/10 rounded-full inline-flex items-center gap-1">
-                                        <Users className="w-3 h-3 text-slate-500" />
-                                        ทั้ง 2 กลุ่ม
-                                      </span>
-                                    )}
-
-                                    {/* Click Count */}
-                                    <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-medium">
-                                      · {link.clickCount || 0} คลิก
-                                    </span>
-
-                                    {/* URL */}
-                                    <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-[200px] sm:max-w-xs hidden lg:inline-block">
-                                      · {link.url}
-                                    </span>
-                                  </div>
-                                </div>
+                              {/* Thumbnail preview */}
+                              <div className="w-12 h-10 rounded-xl bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-200/80 dark:border-white/10 shadow-2xs">
+                                <img 
+                                  src={link.thumbnailUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=100&auto=format&fit=crop"} 
+                                  alt="" 
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
                               </div>
 
-                              {/* Right: Reorder & Action Buttons */}
-                              <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-white/5 w-full md:w-auto justify-end">
-                                {/* Up / Down Buttons */}
-                                {currentUser?.role === "superadmin" && (
-                                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-slate-200/60 dark:border-white/10 mr-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleMoveLink(originalIndex, originalIndex - 1)}
-                                      disabled={isFirst || isSavingOrder}
-                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                                      title="เลื่อนขึ้น 1 อันดับ"
-                                    >
-                                      <ChevronUp className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleMoveLink(originalIndex, originalIndex + 1)}
-                                      disabled={isLast || isSavingOrder}
-                                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                                      title="เลื่อนลง 1 อันดับ"
-                                    >
-                                      <ChevronDown className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                )}
+                              {/* Title & Clear Metadata Row */}
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h5 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm leading-snug truncate">
+                                    {link.title}
+                                  </h5>
+                                  {link.isPinned && (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[10px] font-bold shrink-0">
+                                      📌 ปักหมุด
+                                    </span>
+                                  )}
+                                </div>
 
-                                {/* Pin Button */}
-                                <button
-                                  type="button"
-                                  onClick={() => togglePinStatus(link)}
-                                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                                    (currentUser?.role === "superadmin" ? link.isPinned : currentUser?.pinnedLinks?.includes(link.id))
-                                      ? "bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs" 
-                                      : "hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-slate-200/60 dark:border-white/10"
-                                  }`}
-                                  title={(currentUser?.role === "superadmin" ? link.isPinned : currentUser?.pinnedLinks?.includes(link.id)) ? "ยกเลิกปักหมุด" : "ปักหมุดไว้บนสุด"}
-                                >
-                                  <Pin className="w-4 h-4" />
-                                </button>
-                                
-                                {currentUser?.role === "superadmin" && (
-                                  <>
-                                    {/* Edit Button */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        startEditLink(link);
-                                        document.getElementById("link-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                                      }}
-                                      className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200/70 dark:border-amber-800/50 transition-all cursor-pointer shadow-2xs"
-                                      title="แก้ไขข้อมูลลิงก์"
-                                    >
-                                      <Edit2 className="w-4 h-4" />
-                                    </button>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {/* Category Pill */}
+                                  {cat === 'university' ? (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-full inline-flex items-center gap-1 border border-indigo-200/60 dark:border-indigo-800/40">
+                                      <Building2 className="w-2.5 h-2.5" />
+                                      มหาลัย
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 rounded-full inline-flex items-center gap-1 border border-emerald-200/60 dark:border-emerald-800/40">
+                                      <FlaskConical className="w-2.5 h-2.5" />
+                                      คณะวิทย์ฯ
+                                    </span>
+                                  )}
 
-                                    {/* Delete Button */}
-                                    <button
-                                      type="button"
-                                      onClick={() => setLinkToDelete({ id: link.id, title: link.title })}
-                                      className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200/70 dark:border-rose-800/50 transition-all cursor-pointer shadow-2xs"
-                                      title="ลบลิงก์"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </>
-                                )}
+                                  {/* Audience Pill */}
+                                  {aud === 'staff' ? (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#5c0620] dark:bg-rose-700 rounded-full inline-flex items-center gap-1">
+                                      <Briefcase className="w-2.5 h-2.5" />
+                                      บุคลากร
+                                    </span>
+                                  ) : aud === 'student' ? (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-sky-600 rounded-full inline-flex items-center gap-1">
+                                      <GraduationCap className="w-2.5 h-2.5" />
+                                      นักศึกษา
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/10 rounded-full inline-flex items-center gap-1">
+                                      <Users className="w-2.5 h-2.5 text-slate-500" />
+                                      ทุกคน
+                                    </span>
+                                  )}
+
+                                  {/* Click Count */}
+                                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                                    · {link.clickCount || 0} คลิก
+                                  </span>
+
+                                  {/* URL */}
+                                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-[160px] sm:max-w-xs hidden lg:inline-block">
+                                    · {link.url}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
+
+                            {/* Right: Reorder & Action Buttons */}
+                            <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center pt-1.5 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-white/5 w-full md:w-auto justify-end">
+                              {/* Up / Down Buttons */}
+                              {currentUser?.role === "superadmin" && (
+                                <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-0.5 rounded-lg border border-slate-200/60 dark:border-white/10 mr-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveLink(originalIndex, originalIndex - 1)}
+                                    disabled={isFirst || isSavingOrder}
+                                    className="w-7 h-7 rounded-md flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                                    title="เลื่อนขึ้น 1 อันดับ"
+                                  >
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveLink(originalIndex, originalIndex + 1)}
+                                    disabled={isLast || isSavingOrder}
+                                    className="w-7 h-7 rounded-md flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                                    title="เลื่อนลง 1 อันดับ"
+                                  >
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Pin Button */}
+                              <button
+                                type="button"
+                                onClick={() => togglePinStatus(link)}
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                                  (currentUser?.role === "superadmin" ? link.isPinned : currentUser?.pinnedLinks?.includes(link.id))
+                                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs" 
+                                    : "hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-slate-200/60 dark:border-white/10"
+                                }`}
+                                title={(currentUser?.role === "superadmin" ? link.isPinned : currentUser?.pinnedLinks?.includes(link.id)) ? "ยกเลิกปักหมุด" : "ปักหมุดไว้บนสุด"}
+                              >
+                                <Pin className="w-3.5 h-3.5" />
+                              </button>
+                              
+                              {currentUser?.role === "superadmin" && (
+                                <>
+                                  {/* Edit Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      startEditLink(link);
+                                      document.getElementById("link-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                    }}
+                                    className="w-8 h-8 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200/70 dark:border-amber-800/50 transition-all cursor-pointer shadow-2xs"
+                                    title="แก้ไขข้อมูลลิงก์"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* Delete Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setLinkToDelete({ id: link.id, title: link.title })}
+                                    className="w-8 h-8 rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200/70 dark:border-rose-800/50 transition-all cursor-pointer shadow-2xs"
+                                    title="ลบลิงก์"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>

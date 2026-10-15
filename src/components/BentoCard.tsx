@@ -175,11 +175,11 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
     </a>
   );
 
-  const cardBase = "group relative rounded-[22px] sm:rounded-[26px] overflow-hidden transition-transform duration-150 hover:-translate-y-0.5 focus-within:ring-4 focus-within:ring-[#5c0620]/30 dark:focus-within:ring-rose-500/30";
+  const cardBase = "group relative rounded-[22px] sm:rounded-[26px] overflow-hidden transition-all duration-200 hover:-translate-y-1 focus-within:ring-4 focus-within:ring-[#5c0620]/30 dark:focus-within:ring-rose-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.07)] hover:shadow-[0_14px_34px_rgba(0,0,0,0.13)] border border-slate-200/90 dark:border-white/10";
 
   if (variant === "feature") {
     return (
-      <div className={`${cardBase} bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 flex flex-col h-full`}>
+      <div className={`${cardBase} bg-white dark:bg-[#1e1b1e] flex flex-col h-full`}>
         {hasImage ? (
           <div className="relative h-28 sm:h-40 bg-[#e4dfdd] dark:bg-[#2c272c] overflow-hidden">
             <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -215,7 +215,7 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
 
   if (variant === "wide") {
     return (
-      <div className={`${cardBase} bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 col-span-2 ring-2 ring-[#5c0620] dark:ring-rose-600 grid grid-cols-1 sm:grid-cols-2`}>
+      <div className={`${cardBase} bg-white dark:bg-[#1e1b1e] col-span-2 ring-2 ring-[#5c0620] dark:ring-rose-600 grid grid-cols-1 sm:grid-cols-2`}>
         <div className="relative aspect-[16/10] sm:aspect-auto sm:min-h-[220px] overflow-hidden flex items-center justify-center" style={hasImage ? undefined : { background: tile.bg }}>
           {hasImage ? (
             <div className="absolute inset-0 bg-[#e4dfdd] dark:bg-[#2c272c]">
@@ -253,7 +253,7 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
   }
 
   return (
-    <div className={`${cardBase} bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 flex flex-col h-full`}>
+    <div className={`${cardBase} bg-white dark:bg-[#1e1b1e] flex flex-col h-full`}>
       <div className="relative aspect-[16/10] overflow-hidden flex items-center justify-center" style={hasImage ? undefined : { background: tile.bg }}>
         {hasImage ? (
           <div className="absolute inset-0 bg-[#e4dfdd] dark:bg-[#2c272c]">
