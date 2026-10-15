@@ -260,7 +260,7 @@ export default function App() {
         }));
         localStorage.setItem("scitech_links", JSON.stringify(linkList));
       } else {
-        linkList = linkList.map(normalizeLink);
+        linkList = linkList.map(raw => normalizeLink(raw));
       }
 
       // ⚡ INSTANT RENDER: Present content instantly without waiting for network cold starts!
@@ -284,8 +284,12 @@ export default function App() {
               fetchedLinks = resJson.data;
             }
             if (fetchedLinks && fetchedLinks.length > 0) {
-              const normalized = fetchedLinks.map(normalizeLink);
               setLinks(prev => {
+                const prevMap = new Map(prev.map(p => [p.id, p]));
+                const normalized = fetchedLinks.map((raw: any) => {
+                  const id = String(raw.id || raw[0] || '');
+                  return normalizeLink(raw, prevMap.get(id));
+                });
                 if (JSON.stringify(prev) !== JSON.stringify(normalized)) {
                   localStorage.setItem("scitech_links", JSON.stringify(normalized));
                   return normalized;
@@ -761,8 +765,12 @@ export default function App() {
             }
 
             if (fetchedLinks && isMounted) {
-              const normalized = fetchedLinks.map(normalizeLink);
               setLinks(prev => {
+                const prevMap = new Map(prev.map(p => [p.id, p]));
+                const normalized = fetchedLinks.map((raw: any) => {
+                  const id = String(raw.id || raw[0] || '');
+                  return normalizeLink(raw, prevMap.get(id));
+                });
                 const isSame = JSON.stringify(prev) === JSON.stringify(normalized);
                 if (!isSame) {
                   localStorage.setItem("scitech_links", JSON.stringify(normalized));
@@ -824,12 +832,21 @@ export default function App() {
   };
 
   const handleUpdateLink = async (id: string, updates: Partial<Link>) => {
-    let updatedLink: Link | null = null;
+    let fullUpdatedLink: Link | null = null;
+    
+    // Pre-resolve current link from state or localStorage
+    const currentList: Link[] = links.length > 0 ? links : JSON.parse(localStorage.getItem("scitech_links") || "[]");
+    const existing = currentList.find(l => l.id === id);
+    if (existing) {
+      fullUpdatedLink = { ...existing, ...updates };
+    }
+
     setLinks(prev => {
       const updated = prev.map(l => {
         if (l.id === id) {
-          updatedLink = { ...l, ...updates };
-          return updatedLink;
+          const item = { ...l, ...updates };
+          fullUpdatedLink = item;
+          return item;
         }
         return l;
       });
@@ -837,13 +854,10 @@ export default function App() {
       return updated;
     });
     
-    if (adminConfig.isGoogleSheetSyncEnabled && adminConfig.googleAppsScriptUrl) {
+    if (fullUpdatedLink && adminConfig.isGoogleSheetSyncEnabled && adminConfig.googleAppsScriptUrl) {
+      const targetLink = fullUpdatedLink;
       import('./googleSheets').then(({ sendActionToWebApp }) => {
-        // Since setLinks is async, updatedLink might not be captured yet if we don't await, 
-        // but we set it synchronously inside the setter!
-        if (updatedLink) {
-          sendActionToWebApp(adminConfig.googleAppsScriptUrl!, 'update', { link: updatedLink });
-        }
+        sendActionToWebApp(adminConfig.googleAppsScriptUrl!, 'update', { link: targetLink }, authCreds || undefined);
       });
     }
   };
@@ -858,7 +872,7 @@ export default function App() {
     
     if (adminConfig.isGoogleSheetSyncEnabled && adminConfig.googleAppsScriptUrl) {
       import('./googleSheets').then(({ sendActionToWebApp }) => {
-        sendActionToWebApp(adminConfig.googleAppsScriptUrl!, 'delete', { id });
+        sendActionToWebApp(adminConfig.googleAppsScriptUrl!, 'delete', { id }, authCreds || undefined);
       });
     }
   };

@@ -90,6 +90,8 @@ function getSheet() {
       "ID", "Title", "URL", "Description", "Target Audience", "Click Count", "Created At", "Thumbnail URL", "Is Pinned", "Category"
     ]);
     sheet.getRange(1, 1, 1, 10).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+  } else if (sheet.getLastColumn() < 10) {
+    sheet.getRange(1, 10).setValue("Category").setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
   }
   return sheet;
 }
@@ -152,7 +154,7 @@ function doGet(e) {
           category = "faculty";
         } else {
           var text = (String(row[2] || "") + " " + String(row[1] || "")).toLowerCase();
-          category = (text.indexOf("scitech") >= 0 || text.indexOf("คณะวิทยาศาสตร์") >= 0 || text.indexOf("petition.") >= 0) ? "faculty" : "university";
+          category = (text.indexOf("scitech") >= 0 || text.indexOf("คณะวิทยาศาสตร์") >= 0 || text.indexOf("petition.") >= 0 || text.indexOf("fst") >= 0 || text.indexOf("wise") >= 0) ? "faculty" : "university";
         }
 
         results.push({

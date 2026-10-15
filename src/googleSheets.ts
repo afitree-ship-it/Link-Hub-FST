@@ -81,7 +81,7 @@ export const updateSheetData = async (spreadsheetId: string, values: any[][]) =>
   }
 };
 
-export const normalizeLink = (raw: any): Link => {
+export const normalizeLink = (raw: any, existingLink?: Link): Link => {
   const rawAud = String(raw.targetAudience || (raw.isStaffOnly ? 'staff' : (raw[4] !== undefined ? raw[4] : 'both'))).trim().toLowerCase();
   let targetAudience: 'both' | 'student' | 'staff' = 'both';
   if (rawAud === 'staff' || rawAud === 'yes' || rawAud === 'true' || rawAud === 'บุคลากร') {
@@ -93,16 +93,26 @@ export const normalizeLink = (raw: any): Link => {
   }
 
   // Normalize Category (university | faculty)
-  const rawCat = String(raw.category || (raw[9] !== undefined ? raw[9] : '')).trim().toLowerCase();
+  const rawCat = String(raw.category !== undefined ? raw.category : (raw[9] !== undefined ? raw[9] : '')).trim().toLowerCase();
   let category: 'university' | 'faculty' = 'faculty';
   if (rawCat === 'university' || rawCat === 'uni' || rawCat === 'มหาวิทยาลัย') {
     category = 'university';
   } else if (rawCat === 'faculty' || rawCat === 'fac' || rawCat === 'คณะวิทยาศาสตร์' || rawCat === 'คณะ') {
     category = 'faculty';
+  } else if (existingLink && existingLink.category) {
+    // If incoming data from Google Sheet did not specify a category, PRESERVE the existing local category!
+    category = existingLink.category;
   } else {
     // Intelligent fallback based on URL or title
     const textToCheck = `${raw.url || raw[2] || ''} ${raw.title || raw[1] || ''}`.toLowerCase();
-    if (textToCheck.includes('scitech') || textToCheck.includes('คณะวิทยาศาสตร์') || textToCheck.includes('คณะฯ') || textToCheck.includes('petition.')) {
+    if (
+      textToCheck.includes('scitech') ||
+      textToCheck.includes('คณะวิทยาศาสตร์') ||
+      textToCheck.includes('คณะฯ') ||
+      textToCheck.includes('petition.') ||
+      textToCheck.includes('fst') ||
+      textToCheck.includes('wise')
+    ) {
       category = 'faculty';
     } else {
       category = 'university';
@@ -117,8 +127,8 @@ export const normalizeLink = (raw: any): Link => {
         ? crypto.randomUUID()
         : `link-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`)
     ),
-    title: String(raw.title || raw[1] || ''),
-    url: String(raw.url || raw[2] || ''),
+    title: String(raw.title !== undefined ? raw.title : (raw[1] || '')),
+    url: String(raw.url !== undefined ? raw.url : (raw[2] || '')),
     description: String(raw.description !== undefined ? raw.description : (raw[3] || '')),
     targetAudience,
     category,
@@ -158,7 +168,7 @@ export const DEFAULT_GAS_URL =
   'https://script.google.com/macros/s/AKfycbxY-fNkxvzWl-v_OxRW2mLJNiityRyqmz9La03u3p65yUyP0AueIl9b33iJvVPibJ5ouQ/exec';
 
 // How long after a local write the poller ignores sheet data that may predate it
-export const WRITE_SETTLE_MS = 4000;
+export const WRITE_SETTLE_MS = 15000;
 
 let lastWriteAt = 0;
 export const getLastWriteAt = () => lastWriteAt;
