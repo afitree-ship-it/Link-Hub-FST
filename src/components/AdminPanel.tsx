@@ -6,7 +6,7 @@ import {
   Upload, FileImage, Pin, BarChart3, Bell, Plus, Users, ShieldAlert, ShieldCheck,
   Lock, Download, Copy, Check, FileJson, GraduationCap, Briefcase,
   ExternalLink, Eye, EyeOff, UserCheck, Search, TrendingUp, Sparkles, BarChart2,
-  Building2, FlaskConical, GripVertical, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowUpDown
+  Building2, FlaskConical, GripVertical, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowUpDown, Wrench
 } from "lucide-react";
 import { AVAILABLE_ICONS, DynamicIcon } from "./DynamicIcon";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -841,10 +841,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   }, [isOpen, adminConfig]);
 
-  // Target Audience & Pin State
+  // Target Audience, Pin & Maintenance State
   const [linkTargetAudience, setLinkTargetAudience] = useState<"both" | "student" | "staff">("both");
   const [linkIsStaffOnly, setLinkIsStaffOnly] = useState(false);
   const [linkIsPinned, setLinkIsPinned] = useState(false);
+  const [linkIsMaintenance, setLinkIsMaintenance] = useState(false);
+  const [linkMaintenanceNote, setLinkMaintenanceNote] = useState("");
 
   // Dashboard Real-time table filter & search
   const [dashboardSearch, setDashboardSearch] = useState("");
@@ -1044,6 +1046,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           isStaffOnly: isStaff,
           thumbnailUrl: linkThumbnailUrl,
           isPinned: linkIsPinned,
+          isMaintenance: linkIsMaintenance,
+          maintenanceNote: linkMaintenanceNote,
         });
         showAlert("อัปเดตลิงก์สำเร็จแล้ว");
         setEditingLinkId(null);
@@ -1057,6 +1061,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           isStaffOnly: isStaff,
           thumbnailUrl: linkThumbnailUrl,
           isPinned: linkIsPinned,
+          isMaintenance: linkIsMaintenance,
+          maintenanceNote: linkMaintenanceNote,
         });
         showAlert("เพิ่มลิงก์ใหม่เรียบร้อยแล้ว");
       }
@@ -1068,6 +1074,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setLinkTargetAudience("both");
       setLinkIsStaffOnly(false);
       setLinkIsPinned(false);
+      setLinkIsMaintenance(false);
+      setLinkMaintenanceNote("");
       setLinkThumbnailUrl("");
     } catch (err) {
       showAlert("เกิดข้อผิดพลาดในการบันทึกข้อมูล", "error");
@@ -1407,6 +1415,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setLinkIsStaffOnly(aud === "staff");
     setLinkCategory(link.category || "faculty");
     setLinkIsPinned(link.isPinned || false);
+    setLinkIsMaintenance(link.isMaintenance || false);
+    setLinkMaintenanceNote(link.maintenanceNote || "");
     setLinkThumbnailUrl(link.thumbnailUrl || "");
     // Scroll to form
     document.getElementById("link-form")?.scrollIntoView({ behavior: "smooth" });
@@ -2133,19 +2143,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             <span>รูปภาพประกอบลิงก์ (Thumbnail)</span>
                           </label>
 
-                          {/* Pin Checkbox Inline */}
-                          <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 select-none">
-                            <input
-                              type="checkbox"
-                              checked={linkIsPinned}
-                              onChange={(e) => setLinkIsPinned(e.target.checked)}
-                              className="w-3.5 h-3.5 text-[#5c0620] rounded border-slate-300"
-                            />
-                            <span className="flex items-center gap-1 text-[11px] font-bold">
-                              <Pin className="w-3 h-3 text-rose-500" />
-                              ปักหมุดบนสุด
-                            </span>
-                          </label>
+                          {/* Pin & Maintenance Checkbox Inline */}
+                          <div className="flex items-center gap-3">
+                            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 select-none">
+                              <input
+                                type="checkbox"
+                                checked={linkIsPinned}
+                                onChange={(e) => setLinkIsPinned(e.target.checked)}
+                                className="w-3.5 h-3.5 text-[#5c0620] rounded border-slate-300 cursor-pointer"
+                              />
+                              <span className="flex items-center gap-1 text-[11px] font-bold">
+                                <Pin className="w-3 h-3 text-rose-500" />
+                                ปักหมุดบนสุด
+                              </span>
+                            </label>
+
+                            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-amber-800 dark:text-amber-300 select-none">
+                              <input
+                                type="checkbox"
+                                checked={linkIsMaintenance}
+                                onChange={(e) => setLinkIsMaintenance(e.target.checked)}
+                                className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300 cursor-pointer"
+                              />
+                              <span className="flex items-center gap-1 text-[11px] font-bold">
+                                <Wrench className="w-3 h-3 text-amber-600" />
+                                ปิดปรับปรุง
+                              </span>
+                            </label>
+                          </div>
                         </div>
 
                         {/* Hidden File Input */}
@@ -2234,6 +2259,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-xs transition-all"
                         />
                       </div>
+
+                      {/* Maintenance Note (when linkIsMaintenance is checked) */}
+                      {linkIsMaintenance && (
+                        <div className="p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 space-y-1">
+                          <label className="text-[11px] font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1">
+                            <Wrench className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                            <span>ข้อความแจ้งเตือนขณะปิดปรับปรุง (ไม่บังคับ)</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="เช่น ปิดปรับปรุงระบบ 13:00 - 15:00 น. หรือ ขออภัยในความไม่สะดวก"
+                            value={linkMaintenanceNote}
+                            onChange={(e) => setLinkMaintenanceNote(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-[#1f1a1c] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-amber-500 text-xs transition-all"
+                          />
+                        </div>
+                      )}
 
                       {/* Submit Button */}
                       <div className="pt-1.5 pb-1">
@@ -2409,6 +2451,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                       📌 ปักหมุด
                                     </span>
                                   )}
+                                  {link.isMaintenance && (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[10px] font-bold shrink-0 flex items-center gap-1">
+                                      <Wrench className="w-2.5 h-2.5" />
+                                      ปิดปรับปรุง
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -2480,6 +2528,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                     <ChevronDown className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
+                              )}
+
+                              {/* Maintenance Quick Toggle Button */}
+                              {currentUser?.role === "superadmin" && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const nextState = !link.isMaintenance;
+                                    await onUpdateLink(link.id, { isMaintenance: nextState });
+                                    showAlert(`เปลี่ยนสถานะ "${link.title}" เป็น ${nextState ? "ปิดปรับปรุงชั่วคราว" : "เปิดใช้งานปกติ"}`);
+                                  }}
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                                    link.isMaintenance
+                                      ? "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs"
+                                      : "hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-slate-200/60 dark:border-white/10"
+                                  }`}
+                                  title={link.isMaintenance ? "กำลังปิดปรับปรุง (คลิกเพื่อเปิดให้บริการตามปกติ)" : "เปิดให้บริการปกติ (คลิกเพื่อตั้งเป็นปิดปรับปรุง)"}
+                                >
+                                  <Wrench className="w-3.5 h-3.5" />
+                                </button>
                               )}
 
                               {/* Pin Button */}

@@ -14,6 +14,8 @@ export interface Link {
   createdAt: string;
   thumbnailUrl?: string;
   isPinned?: boolean;
+  isMaintenance?: boolean;
+  maintenanceNote?: string;
 }
 
 export interface User {

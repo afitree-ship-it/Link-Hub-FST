@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "../types";
-import { ArrowUpRight, Pin, PinOff, Edit2, Trash2, BarChart2, GraduationCap, Briefcase, Users, Building2, FlaskConical } from "lucide-react";
+import { ArrowUpRight, Pin, PinOff, Edit2, Trash2, BarChart2, Wrench } from "lucide-react";
 import { Language } from "../i18n";
 
 export type BentoVariant = "feature" | "wide" | "small";
@@ -72,47 +72,12 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
   const hasImage = !!link.thumbnailUrl && !imgFailed;
   const dark = variant === "wide";
 
-  const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
-  const cat = link.category || 'faculty';
-
-  const renderCategoryBadge = () => {
-    if (cat === 'university') {
-      return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
-          <Building2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-          {lang === 'en' ? 'University' : 'มหาวิทยาลัย'}
-        </span>
-      );
-    }
+  const renderMaintenanceBadge = () => {
+    if (!link.isMaintenance) return null;
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
-        <FlaskConical className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-        {lang === 'en' ? 'Faculty' : 'คณะวิทย์ฯ'}
-      </span>
-    );
-  };
-
-  const renderAudienceBadge = (isDark = false) => {
-    if (aud === 'staff') {
-      return (
-        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-rose-950/80 text-rose-200 border border-rose-800' : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-200 dark:border-rose-800/60'}`}>
-          <Briefcase className="w-3 h-3 text-rose-600 dark:text-rose-400" />
-          {lang === 'en' ? 'Staff Only' : 'เฉพาะบุคลากร'}
-        </span>
-      );
-    }
-    if (aud === 'student') {
-      return (
-        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-sky-950/80 text-sky-200 border border-sky-800' : 'bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-200 dark:border-sky-800/60'}`}>
-          <GraduationCap className="w-3 h-3 text-sky-600 dark:text-sky-400" />
-          {lang === 'en' ? 'Students' : 'เฉพาะนักศึกษา'}
-        </span>
-      );
-    }
-    return (
-      <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${isDark ? 'bg-white/10 text-white/90' : 'bg-[#f3f0ef] text-[#5e5558] dark:bg-white/10 dark:text-slate-300'}`}>
-        <Users className="w-3 h-3 text-slate-500 dark:text-slate-400" />
-        {lang === 'en' ? 'All' : 'นักศึกษา & บุคลากร'}
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700/80 shadow-2xs">
+        <Wrench className="w-3 h-3 text-amber-700 dark:text-amber-400" />
+        {lang === 'en' ? 'Under Maintenance' : 'ปิดปรับปรุงระบบ'}
       </span>
     );
   };
@@ -163,19 +128,37 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
     </div>
   );
 
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (link.isMaintenance) {
+      e.preventDefault();
+      e.stopPropagation();
+      const note = link.maintenanceNote?.trim();
+      const msg = note
+        ? (lang === 'en'
+            ? `⚠️ System Under Maintenance:\n\n"${note}"\n\nPlease try again later.`
+            : `⚠️ ระบบกำลังปิดปรับปรุงชั่วคราว:\n\n"${note}"\n\nขออภัยในความไม่สะดวก กรุณาลองใหม่อีกครั้งในภายหลัง`)
+        : (lang === 'en'
+            ? "⚠️ This system is currently under maintenance. Please try again later."
+            : "⚠️ ระบบนี้กำลังปิดปรับปรุงชั่วคราว ขออภัยในความไม่สะดวก กรุณาลองใหม่อีกครั้งในภายหลัง");
+      alert(msg);
+      return;
+    }
+    onIncrementClick(link.id);
+  };
+
   const mainLink = (className: string, children: React.ReactNode) => (
     <a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={() => onIncrementClick(link.id)}
-      className={`${className} after:absolute after:inset-0 after:content-[''] focus-visible:outline-none`}
+      href={link.isMaintenance ? "#" : link.url}
+      target={link.isMaintenance ? undefined : "_blank"}
+      rel={link.isMaintenance ? undefined : "noopener noreferrer"}
+      onClick={handleLinkClick}
+      className={`${className} after:absolute after:inset-0 after:content-[''] focus-visible:outline-none ${link.isMaintenance ? 'cursor-not-allowed' : ''}`}
     >
       {children}
     </a>
   );
 
-  const cardBase = "group relative rounded-[22px] sm:rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-150 ease-out hover:-translate-y-0.5 focus-within:ring-4 focus-within:ring-[#5c0620]/30 dark:focus-within:ring-rose-500/30 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_22px_rgba(0,0,0,0.11)] border border-slate-200/90 hover:border-slate-300 dark:border-white/10 dark:hover:border-white/20 transform-gpu link-card-contain";
+  const cardBase = `group relative rounded-[22px] sm:rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-150 ease-out hover:-translate-y-0.5 focus-within:ring-4 focus-within:ring-[#5c0620]/30 dark:focus-within:ring-rose-500/30 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_22px_rgba(0,0,0,0.11)] border ${link.isMaintenance ? 'border-amber-300 dark:border-amber-700/60' : 'border-slate-200/90 hover:border-slate-300 dark:border-white/10 dark:hover:border-white/20'} transform-gpu link-card-contain`;
 
   if (variant === "feature") {
     return (
@@ -191,8 +174,7 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
           {mainLink("block",
             <>
               <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                {renderCategoryBadge()}
-                {renderAudienceBadge(false)}
+                {renderMaintenanceBadge()}
                 {rank ? (
                   <span className="whitespace-nowrap text-[12px] font-semibold bg-[#f3f0ef] dark:bg-white/10 text-[#4a4245] dark:text-slate-300 rounded-full px-2.5 py-0.5">{lang === 'en' ? `Top #${rank}` : `ยอดนิยม #${rank}`}</span>
                 ) : null}
@@ -231,14 +213,21 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
               <span className="inline-flex items-center gap-1 text-[12px] font-semibold bg-[#5c0620] dark:bg-rose-700 text-white rounded-full px-2.5 py-0.5">
                 <Pin className="w-3 h-3" aria-hidden="true" />{lang === 'en' ? 'Pinned by Faculty' : 'ปักหมุดโดยคณะ'}
               </span>
-              {renderCategoryBadge()}
-              {renderAudienceBadge(false)}
+              {renderMaintenanceBadge()}
             </div>
             {mainLink("block flex-1 min-w-0 pr-12",
               <>
                 <span className="block text-[18px] sm:text-[22px] font-bold leading-snug text-[#1f1a1c] dark:text-white">{link.title}</span>
                 {link.description && <span className="mt-1.5 text-[13px] sm:text-[15px] text-[#5e5558] dark:text-slate-300 leading-relaxed line-clamp-3">{link.description}</span>}
-                <span className="mt-3 inline-flex items-center gap-1 text-[14px] font-semibold text-[#5c0620] dark:text-rose-400">{lang === 'en' ? 'Open Website' : 'เปิดเว็บไซต์'} <ArrowUpRight className="w-4 h-4" aria-hidden="true" /></span>
+                {link.isMaintenance ? (
+                  <span className="mt-3 inline-flex items-center gap-1 text-[14px] font-semibold text-amber-700 dark:text-amber-400">
+                    <Wrench className="w-4 h-4" /> {lang === 'en' ? 'Under Maintenance' : 'ปิดปรับปรุงชั่วคราว'}
+                  </span>
+                ) : (
+                  <span className="mt-3 inline-flex items-center gap-1 text-[14px] font-semibold text-[#5c0620] dark:text-rose-400">
+                    {lang === 'en' ? 'Open Website' : 'เปิดเว็บไซต์'} <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -265,10 +254,11 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
       </div>
       <div className="flex-1 flex flex-col gap-2 p-3.5 sm:p-4 justify-between">
         <div>
-          <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
-            {renderCategoryBadge()}
-            {renderAudienceBadge(false)}
-          </div>
+          {link.isMaintenance && (
+            <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
+              {renderMaintenanceBadge()}
+            </div>
+          )}
           {mainLink("block flex-1 min-w-0",
             <>
               <span className="text-[14px] sm:text-[16px] font-semibold leading-snug text-[#1f1a1c] dark:text-white line-clamp-2">{link.title}</span>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "../types";
-import { ExternalLink, Copy, Check, Trash2, Edit2, BarChart2, Pin } from "lucide-react";
+import { ExternalLink, Copy, Check, Trash2, Edit2, BarChart2, Pin, Wrench } from "lucide-react";
 import { DynamicIcon } from "./DynamicIcon";
 import { motion } from "motion/react";
 
@@ -34,6 +34,16 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    if (link.isMaintenance) {
+      e.preventDefault();
+      e.stopPropagation();
+      const note = link.maintenanceNote?.trim();
+      const msg = note
+        ? `⚠️ ระบบกำลังปิดปรับปรุงชั่วคราว:\n\n"${note}"\n\nขออภัยในความไม่สะดวก กรุณาลองใหม่อีกครั้งในภายหลัง`
+        : "⚠️ ระบบนี้กำลังปิดปรับปรุงชั่วคราว ขออภัยในความไม่สะดวก กรุณาลองใหม่อีกครั้งในภายหลัง";
+      alert(msg);
+      return;
+    }
     onIncrementClick(link.id);
   };
 
@@ -44,13 +54,13 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({
 
   return (
     <motion.a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={link.isMaintenance ? "#" : link.url}
+      target={link.isMaintenance ? undefined : "_blank"}
+      rel={link.isMaintenance ? undefined : "noopener noreferrer"}
       whileHover={{ y: -2, scale: layoutMode === "grid" ? 1.01 : 1.002 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
       onClick={handleClick}
-      className={`group relative flex bg-white/80 dark:bg-[#1e1b1e] backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-slate-300 dark:border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_22px_rgba(92,6,32,0.11)] transition-[border-color,box-shadow] duration-150 cursor-pointer overflow-hidden transform-gpu will-change-transform ${
+      className={`group relative flex bg-white/80 dark:bg-[#1e1b1e] backdrop-blur-xl rounded-2xl sm:rounded-3xl border ${link.isMaintenance ? 'border-amber-300 dark:border-amber-700/60' : 'border-slate-200/90 hover:border-slate-300 dark:border-white/10'} shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_22px_rgba(92,6,32,0.11)] transition-[border-color,box-shadow] duration-150 cursor-pointer overflow-hidden transform-gpu will-change-transform ${
         layoutMode === "grid" ? "flex-col h-full" : 
         layoutMode === "list" ? "flex-col sm:flex-row h-auto sm:h-32" : 
         "flex-row items-center py-2 px-3 sm:px-4 h-auto"
@@ -76,6 +86,12 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({
             }`}>
               <Pin className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
               <span className="tracking-wide">{isPersonalPin && !link.isPinned ? "หมุดส่วนตัว" : "หมุดสำคัญ"}</span>
+            </div>
+          )}
+          {link.isMaintenance && (
+            <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-bold text-amber-900 bg-amber-200/95 backdrop-blur-md rounded-full shadow-sm">
+              <Wrench className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+              <span className="tracking-wide">ปิดปรับปรุง</span>
             </div>
           )}
         </div>

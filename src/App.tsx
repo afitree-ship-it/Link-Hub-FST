@@ -1071,41 +1071,129 @@ export default function App() {
       <main className="max-w-6xl mx-auto w-full px-4 md:px-6 pt-4 md:pt-7 pb-10 flex-1 flex flex-col gap-3 md:gap-4 relative z-10">
 
         {/* Top bar: brand, audience switch, theme toggle & admin */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2.5 font-bold text-[16px] md:text-[17px]">
-            {adminConfig.siteLogoUrl ? (
-              <img src={adminConfig.siteLogoUrl} alt="" className="w-9 h-9 rounded-full object-contain bg-white dark:bg-[#252125]" />
-            ) : (
-              <span className="w-9 h-9 rounded-full bg-[#5c0620] flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-white" aria-hidden="true" />
-              </span>
-            )}
-            <span className="text-[#1f1a1c] dark:text-white">{adminConfig.siteTitle || "FST Link Hub"}</span>
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4 pb-1">
+          {/* Row 1 on mobile / Left on desktop: Brand & Mobile Actions */}
+          <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+            <div className="flex items-center gap-2.5 font-bold text-[15px] sm:text-[17px] min-w-0">
+              {adminConfig.siteLogoUrl ? (
+                <img src={adminConfig.siteLogoUrl} alt="" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-contain bg-white dark:bg-[#252125] shrink-0" />
+              ) : (
+                <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#5c0620] flex items-center justify-center shrink-0">
+                  <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-white" aria-hidden="true" />
+                </span>
+              )}
+              <span className="text-[#1f1a1c] dark:text-white truncate font-extrabold tracking-tight">{adminConfig.siteTitle || "FST Link Hub"}</span>
+            </div>
+
+            {/* Mobile Actions (Visible only on mobile screens) */}
+            <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+              {/* Language Switcher Mobile */}
+              <div role="group" aria-label="เปลี่ยนภาษา" className="flex items-center bg-white dark:bg-[#1e1b1e] border border-slate-200/80 dark:border-white/10 rounded-full p-0.5 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setLang("th")}
+                  aria-pressed={lang === "th"}
+                  className={`px-2 h-7 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                    lang === "th"
+                      ? "bg-[#5c0620] text-white shadow-2xs"
+                      : "text-[#4a4245] dark:text-slate-300"
+                  }`}
+                  title="ภาษาไทย (TH)"
+                >
+                  TH
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang("en")}
+                  aria-pressed={lang === "en"}
+                  className={`px-2 h-7 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                    lang === "en"
+                      ? "bg-[#5c0620] text-white shadow-2xs"
+                      : "text-[#4a4245] dark:text-slate-300"
+                  }`}
+                  title="English (EN)"
+                >
+                  EN
+                </button>
+              </div>
+
+              {/* Theme Toggle Mobile */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Light Mode" : "Dark Mode"}
+                className="w-8 h-8 rounded-full bg-white dark:bg-[#1e1b1e] border border-slate-200/80 dark:border-white/10 flex items-center justify-center text-[#4a4245] dark:text-amber-400 shadow-2xs cursor-pointer active:scale-95"
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+
+              {/* Admin Button Mobile */}
+              {isAdmin ? (
+                <div className="flex items-center gap-1 bg-white dark:bg-[#1e1b1e] border border-slate-200/80 dark:border-white/10 rounded-full p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPanel(true)}
+                    className="h-7 px-2 rounded-full text-[11px] font-bold text-[#5c0620] dark:text-rose-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>แอดมิน</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    title="ออกจากระบบ"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[#4a4245] dark:text-slate-300 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAdminModal(true)}
+                  aria-label="Admin Login"
+                  className="w-8 h-8 rounded-full bg-white dark:bg-[#1e1b1e] border border-slate-200/80 dark:border-white/10 flex items-center justify-center text-[#1f1a1c] dark:text-slate-200 shadow-2xs cursor-pointer active:scale-95"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 order-3 w-full sm:order-none sm:w-auto">
-            <div role="group" aria-label="กลุ่มผู้ใช้" className="grid grid-cols-2 gap-1 bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-full p-1 w-full sm:w-auto shadow-xs">
+          {/* Row 2 on mobile, Center on desktop: Segmented Audience Pill */}
+          <div className="w-full sm:w-auto">
+            <div role="group" aria-label="กลุ่มผู้ใช้" className="grid grid-cols-2 gap-1 bg-white/95 dark:bg-[#1e1b1e] border border-slate-200/80 dark:border-white/10 rounded-full p-1 w-full sm:w-auto shadow-2xs backdrop-blur-md">
               <button
                 type="button"
                 aria-pressed={viewMode === "student"}
                 onClick={() => setViewMode("student")}
-                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer ${viewMode === "student" ? "bg-[#1f1a1c] dark:bg-white text-white dark:text-[#1f1a1c]" : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"}`}
+                className={`flex items-center justify-center gap-1.5 px-4 h-9 sm:h-10 rounded-full text-[13px] sm:text-[14px] font-bold transition-all cursor-pointer ${
+                  viewMode === "student"
+                    ? "bg-[#1f1a1c] dark:bg-white text-white dark:text-[#1f1a1c] shadow-xs"
+                    : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"
+                }`}
               >
-                {lang === "en" ? "Students" : "นักศึกษา"}
+                <GraduationCap className="w-4 h-4" />
+                <span>{lang === "en" ? "Students" : "นักศึกษา"}</span>
               </button>
               <button
                 type="button"
                 aria-pressed={viewMode === "staff"}
                 onClick={handleStaffTabClick}
-                className={`px-5 min-h-11 rounded-full text-[15px] font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${viewMode === "staff" ? "bg-[#5c0620] text-white" : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"}`}
+                className={`flex items-center justify-center gap-1.5 px-4 h-9 sm:h-10 rounded-full text-[13px] sm:text-[14px] font-bold transition-all cursor-pointer ${
+                  viewMode === "staff"
+                    ? "bg-[#5c0620] text-white shadow-xs"
+                    : "text-[#4a4245] dark:text-slate-300 hover:bg-[#f3f0ef] dark:hover:bg-[#2c272c]"
+                }`}
               >
-                {viewMode !== "staff" && <Lock className="w-3.5 h-3.5" aria-hidden="true" />}
+                {viewMode === "staff" ? <Briefcase className="w-4 h-4" /> : <Lock className="w-3.5 h-3.5 opacity-70" />}
                 <span>{lang === "en" ? "Staff" : "บุคลากร"}</span>
               </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Desktop Actions (Hidden on mobile, visible on sm:) */}
+          <div className="hidden sm:flex items-center gap-2">
             {/* Language Switcher with National Flags */}
             <div role="group" aria-label="เปลี่ยนภาษา / Switch Language" className="flex items-center bg-white dark:bg-[#1e1b1e] border border-transparent dark:border-white/10 rounded-full p-1 shadow-xs">
               <button
@@ -1169,7 +1257,7 @@ export default function App() {
               </button>
             )}
           </div>
-        </div>
+        </header>
 
         {/* Staff Mode Status Banner */}
         {viewMode === "staff" && (
@@ -1228,7 +1316,7 @@ export default function App() {
               <input
                 id="link-search"
                 type="search"
-                placeholder={lang === "en" ? "Search systems e.g. Grades, Petitions, Wi-Fi..." : "พิมพ์ชื่อระบบ เช่น เกรด, คำร้อง, Wi‑Fi"}
+                placeholder={lang === "en" ? "Search systems..." : "พิมพ์ชื่อระบบ..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-12 min-h-[52px] md:min-h-14 bg-white dark:bg-[#1a1418] text-[#1f1a1c] dark:text-white placeholder-[#7a7074] dark:placeholder-slate-400 border border-transparent dark:border-white/10 rounded-2xl text-[16px] focus:outline-none focus:ring-4 focus:ring-white/40"

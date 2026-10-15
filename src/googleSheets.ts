@@ -138,11 +138,13 @@ export const normalizeLink = (raw: any, existingLink?: Link): Link => {
     createdAt: String(raw.createdAt || raw[6] || new Date().toISOString()),
     thumbnailUrl: String(raw.thumbnailUrl !== undefined ? raw.thumbnailUrl : (raw[7] || '')),
     isPinned: raw.isPinned === true || raw.isPinned === 'Yes' || raw[8] === 'Yes' || raw[8] === true,
+    isMaintenance: raw.isMaintenance === true || raw.isMaintenance === 'Yes' || raw.isMaintenance === 'true' || raw[10] === 'Yes' || raw[10] === true || raw[10] === 'true' || (existingLink?.isMaintenance ?? false),
+    maintenanceNote: String(raw.maintenanceNote !== undefined ? raw.maintenanceNote : (raw[11] !== undefined ? raw[11] : (existingLink?.maintenanceNote || ''))),
   };
 };
 
 export const syncLinksToGoogleSheet = async (spreadsheetId: string, links: Link[]) => {
-  const headers = ['ID', 'Title', 'URL', 'Description', 'Target Audience', 'Click Count', 'Created At', 'Thumbnail URL', 'Is Pinned', 'Category'];
+  const headers = ['ID', 'Title', 'URL', 'Description', 'Target Audience', 'Click Count', 'Created At', 'Thumbnail URL', 'Is Pinned', 'Category', 'Is Maintenance', 'Maintenance Note'];
   const rows = links.map(link => {
     const audienceValue = link.targetAudience === 'staff' ? 'Staff' : (link.targetAudience === 'student' ? 'Student' : (link.isStaffOnly ? 'Staff' : 'Both'));
     const categoryValue = link.category === 'university' ? 'University' : 'Faculty';
@@ -156,7 +158,9 @@ export const syncLinksToGoogleSheet = async (spreadsheetId: string, links: Link[
       link.createdAt,
       link.thumbnailUrl || '',
       link.isPinned ? 'Yes' : 'No',
-      categoryValue
+      categoryValue,
+      link.isMaintenance ? 'Yes' : 'No',
+      link.maintenanceNote || ''
     ];
   });
 
