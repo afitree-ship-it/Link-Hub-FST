@@ -3,7 +3,7 @@ import { Link, AdminConfig, User, AuthCredentials, StaffPasswordItem } from "../
 import { 
   X, Save, Trash2, Edit2, Key, Info, FolderPlus, 
   Grid, Link2, CheckCircle2, AlertCircle, RefreshCw, Settings,
-  Upload, FileImage, Pin, BarChart3, Bell, Plus, Users, ShieldAlert,
+  Upload, FileImage, Pin, BarChart3, Bell, Plus, Users, ShieldAlert, ShieldCheck,
   Lock, Download, Copy, Check, FileJson, GraduationCap, Briefcase,
   ExternalLink, Eye, EyeOff, UserCheck, Search, TrendingUp, Sparkles, BarChart2,
   Building2, FlaskConical, GripVertical, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowUpDown
@@ -628,6 +628,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
+
+  // Links Tab search & category filters
+  const [linksTabSearch, setLinksTabSearch] = useState("");
+  const [linksTabCategory, setLinksTabCategory] = useState<"all" | "university" | "faculty">("all");
+
+  const displayedOrderedLinks = useMemo(() => {
+    return orderedLinks.filter(l => {
+      if (linksTabCategory !== "all") {
+        const cat = l.category || 'faculty';
+        if (cat !== linksTabCategory) return false;
+      }
+      if (linksTabSearch.trim()) {
+        const q = linksTabSearch.toLowerCase().trim();
+        return (
+          l.title.toLowerCase().includes(q) ||
+          l.url.toLowerCase().includes(q) ||
+          (l.description && l.description.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [orderedLinks, linksTabCategory, linksTabSearch]);
 
   // Link Form State
   const [linkTitle, setLinkTitle] = useState("");
@@ -1451,24 +1473,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   }, [links, dashboardAudienceFilter, dashboardCategoryFilter, dashboardSearch]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-slate-950/60 dark:bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-2 sm:p-4 md:p-6 lg:p-7">
       {linkToDelete && (
-        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4">
-          <div className="bg-white dark:bg-[#1e1b1e] border border-white dark:border-white/10 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 bg-slate-950/70 dark:bg-black/90 backdrop-blur-md flex items-center justify-center z-[70] p-4">
+          <div className="bg-white dark:bg-[#1a171a] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/60 text-[#5c0620] dark:text-rose-400 rounded-2xl flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
             <h3 className="text-lg font-bold text-slate-800 dark:text-white text-center">ยืนยันการลบ</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300 text-center">
+            <p className="text-sm text-slate-600 dark:text-slate-300 text-center leading-relaxed">
               คุณแน่ใจหรือไม่ที่จะลบลิงก์ <strong className="text-rose-600 dark:text-rose-400">"{linkToDelete.title}"</strong> ? การดำเนินการนี้ไม่สามารถย้อนกลับได้
             </p>
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-2.5 pt-2">
               <button
+                type="button"
                 onClick={() => setLinkToDelete(null)}
-                className="flex-1 px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors cursor-pointer"
+                className="flex-1 py-2.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
+                type="button"
                 onClick={executeDeleteLink}
-                className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl transition-colors cursor-pointer"
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm cursor-pointer"
               >
                 ยืนยันลบ
               </button>
@@ -1477,30 +1504,56 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       )}
 
-      <div className="bg-white/95 dark:bg-[#181618] backdrop-blur-2xl border border-white dark:border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.25)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      {/* Main Spacious Bento Modal Container */}
+      <div className="bg-[#fcfaf9] dark:bg-[#121012] border border-slate-200/80 dark:border-white/10 rounded-[32px] w-full max-w-[1520px] h-[95vh] max-h-[1020px] flex flex-col shadow-[0_25px_80px_rgba(0,0,0,0.35)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-white/50 dark:border-white/10 flex items-center justify-between bg-white/50 dark:bg-white/5">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#5c0620] text-white rounded-2xl shadow-xs">
+        {/* Modal Top Header */}
+        <div className="px-6 py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#181618] shrink-0">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 bg-[#5c0620] text-white rounded-2xl flex items-center justify-center shadow-xs shrink-0">
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-slate-800 dark:text-white text-lg">ระบบจัดการข้อมูลกลาง (Central Management)</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">จัดการข้อมูลลิงก์ หมวดหมู่ และระบบความปลอดภัยของคณะฯ</p>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg tracking-tight">
+                  ระบบจัดการข้อมูลกลาง (Central Management)
+                </h2>
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Bento Studio
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                จัดการข้อมูลลิงก์ การจัดเรียงลำดับ หมวดหมู่ และระบบความปลอดภัยของคณะฯ
+              </p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2.5">
+            {currentUser && (
+              <div className="hidden md:flex items-center gap-2 px-3.5 py-2 bg-slate-100 dark:bg-white/10 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-200">
+                <UserCheck className="w-3.5 h-3.5 text-[#5c0620] dark:text-rose-400" />
+                <span>{currentUser.username}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-white/10 text-[#5c0620] dark:text-rose-300 font-bold uppercase">
+                  {currentUser.role}
+                </span>
+              </div>
+            )}
+            <button 
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 dark:bg-white/10 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-300 text-slate-700 dark:text-slate-200 rounded-2xl font-bold text-xs transition-all cursor-pointer active:scale-95 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/40"
+              title="ปิดหน้าต่างจัดการ (Esc)"
+            >
+              <X className="w-4 h-4" />
+              <span>ปิดหน้าต่าง</span>
+            </button>
+          </div>
         </div>
 
         {/* Info Banner & Alerts */}
         {message && (
-          <div className={`px-6 py-3.5 flex items-center gap-2.5 text-sm ${
+          <div className={`px-6 py-3.5 flex items-center gap-2.5 text-sm shrink-0 ${
             message.type === "success" 
               ? "bg-rose-50 dark:bg-rose-950/40 border-b border-rose-100 dark:border-rose-900/50 text-rose-900 dark:text-rose-200" 
               : "bg-red-50 dark:bg-red-950/40 border-b border-red-100 dark:border-red-900/50 text-red-900 dark:text-red-200"
@@ -1510,15 +1563,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="px-6 py-4 bg-slate-50/50 dark:bg-black/20 border-b border-slate-100 dark:border-white/10">
-          <div className="flex bg-slate-100/80 dark:bg-white/5 p-1.5 rounded-2xl overflow-x-auto gap-1 border border-slate-200/50 dark:border-white/10">
+        {/* Bento Tab Navigation Bar */}
+        <div className="px-6 py-3 bg-white/70 dark:bg-[#151315] border-b border-slate-200/80 dark:border-white/10 shrink-0 backdrop-blur-md">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
             <button
+              type="button"
               onClick={() => setActiveTab("dashboard")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
+              className={`min-h-[46px] px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer flex items-center gap-2.5 ${
                 activeTab === "dashboard"
-                  ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
+                  ? "bg-[#5c0620] text-white shadow-md shadow-[#5c0620]/25 scale-[1.02]"
+                  : "bg-white dark:bg-[#1e1b1e] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10"
               }`}
             >
               <BarChart3 className="w-4 h-4" />
@@ -1526,23 +1580,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("links")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
+              className={`min-h-[46px] px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer flex items-center gap-2.5 ${
                 activeTab === "links"
-                  ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
+                  ? "bg-[#5c0620] text-white shadow-md shadow-[#5c0620]/25 scale-[1.02]"
+                  : "bg-white dark:bg-[#1e1b1e] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10"
               }`}
             >
               <Link2 className="w-4 h-4" />
-              <span>จัดการลิงก์ ({links.length})</span>
+              <span>จัดการลิงก์</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                activeTab === "links" ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+              }`}>
+                {links.length}
+              </span>
             </button>
             
             <button
+              type="button"
               onClick={() => setActiveTab("sheets")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
+              className={`min-h-[46px] px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer flex items-center gap-2.5 ${
                 activeTab === "sheets"
-                  ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
+                  ? "bg-[#5c0620] text-white shadow-md shadow-[#5c0620]/25 scale-[1.02]"
+                  : "bg-white dark:bg-[#1e1b1e] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10"
               }`}
             >
               <Grid className="w-4 h-4" />
@@ -1550,36 +1611,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("staff")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
+              className={`min-h-[46px] px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer flex items-center gap-2.5 ${
                 activeTab === "staff"
-                  ? "bg-white dark:bg-[#252125] text-[#5c0620] dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10 font-bold"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
+                  ? "bg-[#5c0620] text-white shadow-md shadow-[#5c0620]/25 scale-[1.02]"
+                  : "bg-white dark:bg-[#1e1b1e] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10"
               }`}
             >
               <Briefcase className="w-4 h-4" />
-              <span>บัญชีบุคลากร ({staffPasswordItems.length})</span>
+              <span>บัญชีบุคลากร</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                activeTab === "staff" ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+              }`}>
+                {staffPasswordItems.length}
+              </span>
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab("security")}
-              className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
+              className={`min-h-[46px] px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer flex items-center gap-2.5 ${
                 activeTab === "security"
-                  ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
+                  ? "bg-[#5c0620] text-white shadow-md shadow-[#5c0620]/25 scale-[1.02]"
+                  : "bg-white dark:bg-[#1e1b1e] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10"
               }`}
             >
               <Settings className="w-4 h-4" />
-              <span>ตั้งค่าระบบ & ความปลอดภัย</span>
+              <span>ตั้งค่าระบบ & สำรองข้อมูล</span>
             </button>
 
             {currentUser?.role === "superadmin" && (
               <button
+                type="button"
                 onClick={() => setActiveTab("admins")}
-                className={`flex-1 min-w-fit flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
+                className={`min-h-[46px] px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer flex items-center gap-2.5 ${
                   activeTab === "admins"
-                    ? "bg-white dark:bg-[#252125] text-rose-900 dark:text-rose-300 shadow-xs border border-slate-200/50 dark:border-white/10"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10"
+                    ? "bg-[#5c0620] text-white shadow-md shadow-[#5c0620]/25 scale-[1.02]"
+                    : "bg-white dark:bg-[#1e1b1e] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10"
                 }`}
               >
                 <Users className="w-4 h-4" />
@@ -1596,254 +1665,267 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {activeTab === "dashboard" && (
             <div className="space-y-6">
               {/* Top Banner with Real-time Status */}
-              <div className="bg-gradient-to-r from-rose-950 via-[#5c0620] to-[#3a0210] text-white p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
+              <div className="bg-gradient-to-r from-[#3b0211] via-[#5c0620] to-[#25030b] text-white p-6 sm:p-7 rounded-[28px] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-rose-900/30">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
                     <span className="relative flex h-3 w-3">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                     </span>
-                    <span className="text-xs uppercase tracking-wider font-bold text-emerald-300">Live Real-time Analytics</span>
+                    <span className="text-[11px] uppercase tracking-widest font-extrabold text-emerald-300">Live Analytics Engine</span>
                   </div>
-                  <h3 className="text-lg font-bold">สถิติการเข้าใช้งานระบบ & ลิงก์สำคัญแบบเรียลไทม์</h3>
-                  <p className="text-xs text-rose-200 mt-0.5">ยอดการคลิกเข้าชมจะอัปเดตแบบเรียลไทม์ทันทีเมื่อมีผู้ใช้งานคลิกจากทุกอุปกรณ์</p>
+                  <h3 className="text-xl font-black tracking-tight">สถิติการเข้าใช้งานระบบ & ลิงก์สำคัญแบบเรียลไทม์</h3>
+                  <p className="text-xs text-rose-200/90 max-w-2xl leading-relaxed">ยอดการคลิกเข้าชมและสถิติความนิยมจะอัปเดตแบบเรียลไทม์ทันทีเมื่อมีผู้ใช้งานเปิดลิงก์จากทุกอุปกรณ์</p>
                 </div>
-                <div className="flex items-center gap-2 self-start sm:self-center">
-                  <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md text-xs font-semibold flex items-center gap-1.5 border border-white/10">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                    <span>ซิงค์อัตโนมัติ</span>
+                <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                  <span className="px-4 py-2 rounded-2xl bg-white/10 backdrop-blur-md text-xs font-bold flex items-center gap-2 border border-white/10">
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>ซิงค์อัตโนมัติ 24 ชม.</span>
                   </span>
                 </div>
               </div>
 
-              {/* KPI Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-white dark:bg-[#1e1b1e] p-4 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-1">
+              {/* KPI Bento Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white dark:bg-[#1a171a] p-5 rounded-[24px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-2 hover:border-[#5c0620]/30 transition-all">
                   <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                    <span className="text-xs font-semibold">ยอดคลิกเข้าชมรวม</span>
-                    <BarChart2 className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider">ยอดคลิกเข้าชมรวม</span>
+                    <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-[#5c0620] dark:text-rose-400 flex items-center justify-center">
+                      <BarChart2 className="w-4 h-4" />
+                    </div>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white">{totalClicks.toLocaleString()}</div>
-                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
+                  <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{totalClicks.toLocaleString()}</div>
+                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    <TrendingUp className="w-3.5 h-3.5" />
                     <span>จากทุกลิงก์ในระบบ</span>
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#1e1b1e] p-4 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-1">
+                <div className="bg-white dark:bg-[#1a171a] p-5 rounded-[24px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-2 hover:border-[#5c0620]/30 transition-all">
                   <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                    <span className="text-xs font-semibold">ลิงก์ทั้งหมด</span>
-                    <Link2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider">ลิงก์ทั้งหมด</span>
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 flex items-center justify-center">
+                      <Link2 className="w-4 h-4" />
+                    </div>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white">{links.length}</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">รายการในพอร์ทัล</div>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{links.length}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">รายการในพอร์ทัล</div>
                 </div>
 
-                <div className="bg-white dark:bg-[#1e1b1e] p-4 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-1">
+                <div className="bg-white dark:bg-[#1a171a] p-5 rounded-[24px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-2 hover:border-[#5c0620]/30 transition-all">
                   <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                    <span className="text-xs font-semibold">เฉพาะบุคลากร</span>
-                    <Briefcase className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider">เฉพาะบุคลากร</span>
+                    <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-[#5c0620] dark:text-rose-300 flex items-center justify-center">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
                   </div>
-                  <div className="text-2xl font-extrabold text-rose-900 dark:text-rose-300">{staffLinksCount}</div>
+                  <div className="text-3xl font-black text-[#5c0620] dark:text-rose-400 tracking-tight">{staffLinksCount}</div>
                   <div className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold">ระบบภายในต้องใช้รหัส</div>
                 </div>
 
-                <div className="bg-white dark:bg-[#1e1b1e] p-4 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-1">
+                <div className="bg-white dark:bg-[#1a171a] p-5 rounded-[24px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-2 hover:border-[#5c0620]/30 transition-all">
                   <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                    <span className="text-xs font-semibold">เฉพาะนักศึกษา / ทั่วไป</span>
-                    <GraduationCap className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider">นักศึกษา / ทั่วไป</span>
+                    <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                      <GraduationCap className="w-4 h-4" />
+                    </div>
                   </div>
-                  <div className="text-2xl font-extrabold text-sky-900 dark:text-sky-300">{studentLinksCount + bothLinksCount}</div>
+                  <div className="text-3xl font-black text-sky-900 dark:text-sky-300 tracking-tight">{studentLinksCount + bothLinksCount}</div>
                   <div className="text-[11px] text-sky-600 dark:text-sky-400 font-semibold">นักศึกษา {studentLinksCount} · ทั้งสอง {bothLinksCount}</div>
                 </div>
               </div>
 
-              {/* Chart */}
-              <div className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-4">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
-                    <h3 className="font-bold text-slate-800 dark:text-white">
-                      10 อันดับระบบที่มีการเข้าใช้งานมากที่สุด (Top Visited Systems)
-                    </h3>
-                  </div>
-                </div>
-                {topLinksData.length > 0 && topLinksData[0].clicks > 0 ? (
-                  <div className="h-[280px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topLinksData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
-                        <XAxis type="number" stroke="#94a3b8" />
-                        <YAxis dataKey="name" type="category" width={160} tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#94a3b8" />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: '#1e1b1e', borderColor: '#332d33', borderRadius: '12px', color: '#fff' }}
-                          formatter={(value) => [`${value} ครั้ง`, "จำนวนคลิก"]}
-                          labelFormatter={(label, payload) => {
-                            if (payload && payload.length > 0) {
-                              return payload[0].payload.fullTitle;
-                            }
-                            return label;
-                          }}
-                        />
-                        <Bar dataKey="clicks" fill="#e11d48" radius={[0, 6, 6, 0]} barSize={20} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="py-10 text-center text-slate-400">
-                    ยังไม่มีข้อมูลสถิติการคลิก หรือข้อมูลไม่เพียงพอ
-                  </div>
-                )}
-              </div>
-
-              {/* Real-time Usage Table for ALL Links */}
-              <div className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
+              {/* Bento Deep-Dive: Side-by-side Chart and Live Activity Table */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                {/* Left: Top 10 Chart Bento Card */}
+                <div className="xl:col-span-5 bg-white dark:bg-[#1a171a] p-6 rounded-[28px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-2.5 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
                     <div>
-                      <h3 className="font-bold text-slate-800 dark:text-white">ตารางสถิติและลำดับความนิยมของลิงก์ (Real-time Live Table)</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">เรียงตามยอดเข้าชมจากมากไปน้อย พร้อมระบุกลุ่มเป้าหมาย</p>
+                      <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                        10 อันดับระบบยอดนิยม
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Top Visited Systems ตามสถิติคลิกเข้าชม</p>
                     </div>
                   </div>
-                  
-                  {/* Search and Filters */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <input 
-                      type="text"
-                      placeholder="ค้นหาระบบ..."
-                      value={dashboardSearch}
-                      onChange={(e) => setDashboardSearch(e.target.value)}
-                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20"
-                    />
-                    <select
-                      value={dashboardCategoryFilter}
-                      onChange={(e) => setDashboardCategoryFilter(e.target.value as any)}
-                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700 dark:text-slate-200 font-medium"
-                    >
-                      <option value="all">ทุกหมวดหมู่ (All)</option>
-                      <option value="university">🏛️ ระบบมหาวิทยาลัย</option>
-                      <option value="faculty">🔬 ระบบคณะวิทยาศาสตร์</option>
-                    </select>
-                    <select
-                      value={dashboardAudienceFilter}
-                      onChange={(e) => setDashboardAudienceFilter(e.target.value as any)}
-                      className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700 dark:text-slate-200"
-                    >
-                      <option value="all">ทุกลิงก์ ({links.length})</option>
-                      <option value="staff">เฉพาะบุคลากร ({staffLinksCount})</option>
-                      <option value="student">เฉพาะนักศึกษา ({studentLinksCount})</option>
-                      <option value="both">ทั้ง 2 กลุ่ม ({bothLinksCount})</option>
-                    </select>
-                  </div>
+                  {topLinksData.length > 0 && topLinksData[0].clicks > 0 ? (
+                    <div className="h-[340px] w-full pt-2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topLinksData} layout="vertical" margin={{ top: 5, right: 25, left: 5, bottom: 5 }}>
+                          <XAxis type="number" stroke="#94a3b8" />
+                          <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#94a3b8" />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#1e1b1e', borderColor: '#332d33', borderRadius: '16px', color: '#fff' }}
+                            formatter={(value) => [`${value} ครั้ง`, "จำนวนคลิก"]}
+                            labelFormatter={(label, payload) => {
+                              if (payload && payload.length > 0) {
+                                return payload[0].payload.fullTitle;
+                              }
+                              return label;
+                            }}
+                          />
+                          <Bar dataKey="clicks" fill="#e11d48" radius={[0, 8, 8, 0]} barSize={22} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="py-24 text-center text-slate-400 space-y-2">
+                      <BarChart3 className="w-10 h-10 mx-auto opacity-30" />
+                      <p className="text-sm font-medium">ยังไม่มีข้อมูลสถิติการคลิก</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-white/10">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-white/10">
-                      <tr>
-                        <th className="p-3 w-12 text-center">#</th>
-                        <th className="p-3">ระบบ / ลิงก์</th>
-                        <th className="p-3 w-32">หมวดหมู่</th>
-                        <th className="p-3 w-32">กลุ่มเป้าหมาย</th>
-                        <th className="p-3 w-36 text-right">ยอดเข้าชม (คลิก)</th>
-                        <th className="p-3 w-28 text-right">สัดส่วน (% Share)</th>
-                        <th className="p-3 w-20 text-center">เปิดดู</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                      {dashboardFilteredLinks.length === 0 ? (
+                {/* Right: Real-time Live Table Bento Card */}
+                <div className="xl:col-span-7 bg-white dark:bg-[#1a171a] p-6 rounded-[28px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2.5 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 dark:text-white text-base">ตารางสถิติเรียลไทม์ (Live Table)</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">เรียงตามยอดเข้าชมจากมากไปน้อย</p>
+                      </div>
+                    </div>
+                    
+                    {/* Search and Filters */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <input 
+                        type="text"
+                        placeholder="ค้นหาระบบ..."
+                        value={dashboardSearch}
+                        onChange={(e) => setDashboardSearch(e.target.value)}
+                        className="px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 font-medium"
+                      />
+                      <select
+                        value={dashboardCategoryFilter}
+                        onChange={(e) => setDashboardCategoryFilter(e.target.value as any)}
+                        className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#252125] focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700 dark:text-slate-200 font-semibold"
+                      >
+                        <option value="all">ทุกหมวดหมู่</option>
+                        <option value="university">🏛️ มหาวิทยาลัย</option>
+                        <option value="faculty">🔬 คณะวิทย์ฯ</option>
+                      </select>
+                      <select
+                        value={dashboardAudienceFilter}
+                        onChange={(e) => setDashboardAudienceFilter(e.target.value as any)}
+                        className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#252125] focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 text-slate-700 dark:text-slate-200 font-semibold"
+                      >
+                        <option value="all">ทุกลิงก์ ({links.length})</option>
+                        <option value="staff">เฉพาะบุคลากร ({staffLinksCount})</option>
+                        <option value="student">เฉพาะนักศึกษา ({studentLinksCount})</option>
+                        <option value="both">ทั้ง 2 กลุ่ม ({bothLinksCount})</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-white/10">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200/80 dark:border-white/10">
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-slate-400">
-                            ไม่พบข้อมูลลิงก์ที่ตรงกับเงื่อนไขค้นหา
-                          </td>
+                          <th className="p-3 w-12 text-center">#</th>
+                          <th className="p-3">ระบบ / ลิงก์</th>
+                          <th className="p-3 w-28">หมวดหมู่</th>
+                          <th className="p-3 w-28">กลุ่มเป้าหมาย</th>
+                          <th className="p-3 w-32 text-right">ยอดเข้าชม</th>
+                          <th className="p-3 w-28 text-right">สัดส่วน (% Share)</th>
+                          <th className="p-3 w-16 text-center">เปิด</th>
                         </tr>
-                      ) : (
-                        dashboardFilteredLinks.map((link, idx) => {
-                          const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
-                          const cat = link.category || 'faculty';
-                          const clickShare = totalClicks > 0 ? Math.round(((link.clickCount || 0) / totalClicks) * 100) : 0;
-                          return (
-                            <tr key={link.id} className="hover:bg-slate-50/70 dark:hover:bg-white/5 transition-colors">
-                              <td className="p-3 text-center font-bold text-slate-400">
-                                {idx < 3 ? (
-                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[11px] font-bold ${
-                                    idx === 0 ? "bg-amber-500 shadow-xs" : idx === 1 ? "bg-slate-400" : "bg-amber-700"
-                                  }`}>
-                                    {idx + 1}
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                        {dashboardFilteredLinks.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-8 text-center text-slate-400">
+                              ไม่พบข้อมูลลิงก์ที่ตรงกับเงื่อนไขค้นหา
+                            </td>
+                          </tr>
+                        ) : (
+                          dashboardFilteredLinks.map((link, idx) => {
+                            const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+                            const cat = link.category || 'faculty';
+                            const clickShare = totalClicks > 0 ? Math.round(((link.clickCount || 0) / totalClicks) * 100) : 0;
+                            return (
+                              <tr key={link.id} className="hover:bg-slate-50/70 dark:hover:bg-white/5 transition-colors">
+                                <td className="p-3 text-center font-bold text-slate-400">
+                                  {idx < 3 ? (
+                                    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[11px] font-bold ${
+                                      idx === 0 ? "bg-amber-500 shadow-xs" : idx === 1 ? "bg-slate-400" : "bg-amber-700"
+                                    }`}>
+                                      {idx + 1}
+                                    </span>
+                                  ) : (
+                                    idx + 1
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  <div className="font-semibold text-slate-800 dark:text-white line-clamp-1">{link.title}</div>
+                                  <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-xs">{link.url}</div>
+                                </td>
+                                <td className="p-3">
+                                  {cat === 'university' ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 px-2 py-0.5 rounded-full">
+                                      <Building2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                                      มหาวิทยาลัย
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
+                                      <FlaskConical className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                      คณะวิทย์ฯ
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  {aud === 'staff' ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40 px-2 py-0.5 rounded-full">
+                                      <Briefcase className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                                      เฉพาะบุคลากร
+                                    </span>
+                                  ) : aud === 'student' ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 px-2 py-0.5 rounded-full">
+                                      <GraduationCap className="w-3 h-3 text-sky-600 dark:text-sky-400" />
+                                      เฉพาะนักศึกษา
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full">
+                                      <Users className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+                                      ทั้ง 2 กลุ่ม
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right">
+                                  <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                                    {(link.clickCount || 0).toLocaleString()}
                                   </span>
-                                ) : (
-                                  idx + 1
-                                )}
-                              </td>
-                              <td className="p-3">
-                                <div className="font-semibold text-slate-800 dark:text-white line-clamp-1">{link.title}</div>
-                                <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate max-w-xs">{link.url}</div>
-                              </td>
-                              <td className="p-3">
-                                {cat === 'university' ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 px-2 py-0.5 rounded-full">
-                                    <Building2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-                                    มหาวิทยาลัย
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
-                                    <FlaskConical className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                    คณะวิทย์ฯ
-                                  </span>
-                                )}
-                              </td>
-                              <td className="p-3">
-                                {aud === 'staff' ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40 px-2 py-0.5 rounded-full">
-                                    <Briefcase className="w-3 h-3 text-rose-600 dark:text-rose-400" />
-                                    เฉพาะบุคลากร
-                                  </span>
-                                ) : aud === 'student' ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 px-2 py-0.5 rounded-full">
-                                    <GraduationCap className="w-3 h-3 text-sky-600 dark:text-sky-400" />
-                                    เฉพาะนักศึกษา
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full">
-                                    <Users className="w-3 h-3 text-slate-500 dark:text-slate-400" />
-                                    ทั้ง 2 กลุ่ม
-                                  </span>
-                                )}
-                              </td>
-                              <td className="p-3 text-right">
-                                <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                                  {(link.clickCount || 0).toLocaleString()}
-                                </span>
-                                <span className="text-slate-400 text-[11px] ml-1">ครั้ง</span>
-                              </td>
-                              <td className="p-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <div className="w-16 bg-slate-100 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
-                                    <div 
-                                      className="bg-[#5c0620] dark:bg-rose-600 h-full rounded-full transition-all duration-300"
-                                      style={{ width: `${Math.min(100, Math.max(4, clickShare))}%` }}
-                                    ></div>
+                                  <span className="text-slate-400 text-[11px] ml-1">ครั้ง</span>
+                                </td>
+                                <td className="p-3 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <div className="w-16 bg-slate-100 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
+                                      <div 
+                                        className="bg-[#5c0620] dark:bg-rose-600 h-full rounded-full transition-all duration-300"
+                                        style={{ width: `${Math.min(100, Math.max(4, clickShare))}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 w-8">{clickShare}%</span>
                                   </div>
-                                  <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 w-8">{clickShare}%</span>
-                                </div>
-                              </td>
-                              <td className="p-3 text-center">
-                                <a
-                                  href={link.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-1.5 inline-flex text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors"
-                                  title="เปิดลิงก์"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </a>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <a
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 inline-flex text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors"
+                                    title="เปิดลิงก์"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1851,201 +1933,210 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           {/* TAB 1: MANAGE LINKS */}
           {activeTab === "links" && (
-            <div className="space-y-8">
-              {/* Add/Edit Link Form */}
-              {currentUser?.role === "superadmin" ? (
-                <div id="link-form" className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
-                    <h3 className="font-bold text-slate-800 dark:text-white">
-                      {editingLinkId ? "แก้ไขข้อมูลลิงก์สำคัญ" : "เพิ่มลิงก์แนะนำใหม่"}
-                    </h3>
-                  </div>
-
-                <form onSubmit={handleLinkSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5 col-span-1">
-                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">ชื่อลิงก์ / หัวข้อ <span className="text-rose-500">*</span></label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="เช่น ระบบบริการการศึกษา (REG)"
-                      value={linkTitle}
-                      onChange={(e) => setLinkTitle(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 col-span-1">
-                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">
-                      หมวดหมู่ของระบบ (Category) <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-1.5 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setLinkCategory('university')}
-                        className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
-                          linkCategory === 'university'
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                            : 'bg-white dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
-                        }`}
-                      >
-                        <Building2 className="w-4 h-4" />
-                        <span>ระบบมหาวิทยาลัย</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setLinkCategory('faculty')}
-                        className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
-                          linkCategory === 'faculty'
-                            ? 'bg-[#5c0620] text-white border-[#5c0620] shadow-xs'
-                            : 'bg-white dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
-                        }`}
-                      >
-                        <FlaskConical className="w-4 h-4" />
-                        <span>ระบบคณะวิทยาศาสตร์</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 col-span-1">
-                    <label className="text-xs font-semibold text-slate-600 block">
-                      กลุ่มเป้าหมายการแสดงผล (Target Audience) <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-3 gap-1.5 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLinkTargetAudience('both');
-                          setLinkIsStaffOnly(false);
-                        }}
-                        className={`p-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
-                          linkTargetAudience === 'both'
-                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                        <span>ทั้ง 2 กลุ่ม</span>
-                        <span className={`text-[9px] ${linkTargetAudience === 'both' ? 'text-slate-300' : 'text-slate-400'}`}>นักศึกษา & บุคลากร</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLinkTargetAudience('student');
-                          setLinkIsStaffOnly(false);
-                        }}
-                        className={`p-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
-                          linkTargetAudience === 'student'
-                            ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <GraduationCap className="w-3.5 h-3.5" />
-                        <span>แค่นักศึกษา</span>
-                        <span className={`text-[9px] ${linkTargetAudience === 'student' ? 'text-sky-100' : 'text-slate-400'}`}>ซ่อนจากบุคลากร</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLinkTargetAudience('staff');
-                          setLinkIsStaffOnly(true);
-                        }}
-                        className={`p-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
-                          linkTargetAudience === 'staff'
-                            ? 'bg-[#5c0620] text-white border-[#5c0620] shadow-xs'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Briefcase className="w-3.5 h-3.5" />
-                        <span>แค่บุคลากร</span>
-                        <span className={`text-[9px] ${linkTargetAudience === 'staff' ? 'text-rose-200' : 'text-slate-400'}`}>ซ่อนจากนักศึกษา</span>
-                      </button>
-                    </div>
-
-                    <div className="pt-1.5">
-                      <label className="flex items-center gap-2 cursor-pointer p-2 border border-slate-200 rounded-xl hover:bg-slate-50 w-full transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={linkIsPinned}
-                          onChange={(e) => setLinkIsPinned(e.target.checked)}
-                          className="w-4 h-4 text-[#5c0620] bg-slate-100 border-slate-300 rounded focus:ring-[#5c0620]"
-                        />
-                        <span className="text-xs font-medium text-slate-700 flex items-center gap-1">
-                          <Pin className="w-3.5 h-3.5 text-rose-500" />
-                          ปักหมุดไว้บนสุด (Pin to Top)
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 col-span-1 md:col-span-2">
-                    <label className="text-xs font-semibold text-slate-600 block">ที่อยู่เว็บ (URL) <span className="text-rose-500">*</span></label>
-                    <input
-                      type="url"
-                      required
-                      placeholder="เช่น https://reg.ftu.ac.th"
-                      value={linkUrl}
-                      onChange={(e) => setLinkUrl(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 col-span-1 md:col-span-2">
-                    <label className="text-xs font-semibold text-slate-600 block">คำอธิบายย่อ (เพื่อให้นักศึกษาเข้าใจง่ายขึ้น)</label>
-                    <textarea
-                      rows={2}
-                      placeholder="เช่น ใช้สำหรับลงทะเบียนเรียน เพิ่ม-ถอนรายวิชา และตรวจสอบเกรดเฉลี่ยรายภาคเรียน"
-                      value={linkDesc}
-                      onChange={(e) => setLinkDesc(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-900 text-sm"
-                    />
-                  </div>
-
-                  {/* Thumbnail Image section with Upload, Drop & Paste (Ctrl+V) support */}
-                  <div className="space-y-2 col-span-1 md:col-span-2">
-                    <label className="text-xs font-semibold text-slate-700 flex items-center justify-between flex-wrap gap-2">
-                      <span className="flex items-center gap-1.5">
-                        <FileImage className="w-4 h-4 text-rose-900" />
-                        <span>รูปภาพประกอบลิงก์ (Thumbnail Image)</span>
-                      </span>
-                      <span className="text-[10px] bg-rose-50 text-rose-900 px-2 py-0.5 rounded-md font-bold border border-rose-100">
-                        ขนาดแนะนำ: 16:10 (ระบบจะปรับขนาดและจัดครอปให้พอดีและกระชับโดยอัตโนมัติ)
-                      </span>
-                    </label>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Left side: URL text field alternative */}
-                      <div className="md:col-span-2 flex flex-col justify-between space-y-3">
-                        <div className="space-y-1">
-                          <span className="text-[11px] font-semibold text-slate-500 block">แบบที่ 1: วาง URL รูปภาพจากเว็บไซต์อื่น (เช่น Unsplash, Web URL)</span>
-                          <input
-                            type="url"
-                            placeholder="ป้อน URL รูปภาพ เช่น https://images.unsplash.com/photo-..."
-                            value={linkThumbnailUrl}
-                            onChange={(e) => setLinkThumbnailUrl(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-900 text-sm font-mono"
-                          />
-                        </div>
-
-                        <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-100/60 text-xs text-rose-900 leading-relaxed font-light space-y-1">
-                          <div className="flex items-center gap-1.5 font-bold">
-                            <Info className="w-4 h-4 text-rose-900 shrink-0" />
-                            <span>เคล็ดลับความสะดวกสูงสุด:</span>
-                          </div>
-                          <p>
-                            เพียงแค่ไปที่ภาพใดก็ได้ กดคลิกขวาแล้วเลือก <strong>"คัดลอกรูปภาพ" (Copy Image)</strong> 
-                            แล้วกลับมาที่หน้าต่างนี้แล้วกดปุ่ม <kbd className="bg-white px-1.5 py-0.5 rounded-sm border border-rose-200 font-mono font-bold text-slate-800 text-[10px]">Ctrl + V</kbd> ได้เลยทันที! ระบบจะประมวลผลเซฟลงระบบอัตโนมัติ
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+              
+              {/* Left Column: Bento Card - Add / Edit Link Form */}
+              <div className="xl:col-span-5 xl:sticky xl:top-2 self-start">
+                {currentUser?.role === "superadmin" ? (
+                  <div id="link-form" className="bg-white dark:bg-[#1a171a] p-6 sm:p-7 rounded-[28px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10 flex-wrap gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-2.5 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
+                        <div>
+                          <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
+                            {editingLinkId ? "แก้ไขข้อมูลลิงก์" : "เพิ่มลิงก์แนะนำใหม่"}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {editingLinkId ? "แก้ไขรายละเอียดแล้วกดบันทึก" : "กรอกข้อมูลและตั้งค่าลิงก์เข้าสู่พอร์ทัล"}
                           </p>
                         </div>
                       </div>
 
-                      {/* Right side: Click/Drag/Paste container */}
-                      <div className="md:col-span-1 flex flex-col justify-between">
-                        <span className="text-[11px] font-semibold text-slate-500 block mb-1">แบบที่ 2: อัปโหลด / วางภาพตรงนี้</span>
-                        
+                      {editingLinkId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingLinkId(null);
+                            setLinkTitle("");
+                            setLinkUrl("");
+                            setLinkDesc("");
+                            setLinkIsStaffOnly(false);
+                            setLinkTargetAudience('both');
+                            setLinkThumbnailUrl("");
+                          }}
+                          className="px-3 py-1.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                        >
+                          ยกเลิกแก้ไข
+                        </button>
+                      )}
+                    </div>
+
+                    <form onSubmit={handleLinkSubmit} className="space-y-4">
+                      {/* Title */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          ชื่อระบบ / หัวข้อลิงก์ <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="เช่น ระบบบริการการศึกษา (REG)"
+                          value={linkTitle}
+                          onChange={(e) => setLinkTitle(e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-semibold transition-all"
+                        />
+                      </div>
+
+                      {/* Category Selection (Bento Chips) */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          หมวดหมู่ของระบบ (Category) <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setLinkCategory('university')}
+                            className={`min-h-[46px] p-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                              linkCategory === 'university'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
+                            }`}
+                          >
+                            <Building2 className="w-4 h-4 shrink-0" />
+                            <span>ระบบมหาวิทยาลัย</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setLinkCategory('faculty')}
+                            className={`min-h-[46px] p-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                              linkCategory === 'faculty'
+                                ? 'bg-[#5c0620] text-white border-[#5c0620] shadow-sm'
+                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
+                            }`}
+                          >
+                            <FlaskConical className="w-4 h-4 shrink-0" />
+                            <span>ระบบคณะวิทยาศาสตร์</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Target Audience (Bento Chips) */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          กลุ่มเป้าหมายการแสดงผล (Target Audience) <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLinkTargetAudience('both');
+                              setLinkIsStaffOnly(false);
+                            }}
+                            className={`p-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
+                              linkTargetAudience === 'both'
+                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs'
+                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
+                            }`}
+                          >
+                            <Users className="w-4 h-4" />
+                            <span>ทั้ง 2 กลุ่ม</span>
+                            <span className="text-[10px] font-normal opacity-80">นักศึกษา & บุคลากร</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLinkTargetAudience('student');
+                              setLinkIsStaffOnly(false);
+                            }}
+                            className={`p-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
+                              linkTargetAudience === 'student'
+                                ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
+                            }`}
+                          >
+                            <GraduationCap className="w-4 h-4" />
+                            <span>แค่นักศึกษา</span>
+                            <span className="text-[10px] font-normal opacity-80">ซ่อนจากบุคลากร</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLinkTargetAudience('staff');
+                              setLinkIsStaffOnly(true);
+                            }}
+                            className={`p-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
+                              linkTargetAudience === 'staff'
+                                ? 'bg-[#5c0620] text-white border-[#5c0620] shadow-xs'
+                                : 'bg-slate-50/60 dark:bg-[#252125] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5'
+                            }`}
+                          >
+                            <Briefcase className="w-4 h-4" />
+                            <span>แค่บุคลากร</span>
+                            <span className="text-[10px] font-normal opacity-80">ซ่อนจากนักศึกษา</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Pin to Top Toggle */}
+                      <div>
+                        <label className="flex items-center gap-3 cursor-pointer p-3 border border-slate-200 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 w-full transition-colors bg-slate-50/30 dark:bg-[#252125]">
+                          <input
+                            type="checkbox"
+                            checked={linkIsPinned}
+                            onChange={(e) => setLinkIsPinned(e.target.checked)}
+                            className="w-4 h-4 text-[#5c0620] bg-white border-slate-300 rounded focus:ring-[#5c0620]"
+                          />
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <Pin className="w-4 h-4 text-rose-500" />
+                            <span>ปักหมุดไว้บนสุด (Pin to Top เป็นการ์ดขนาดใหญ่)</span>
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* URL */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          ที่อยู่เว็บไซต์ (URL) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="url"
+                          required
+                          placeholder="เช่น https://reg.ftu.ac.th"
+                          value={linkUrl}
+                          onChange={(e) => setLinkUrl(e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono transition-all"
+                        />
+                      </div>
+
+                      {/* Description */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          คำอธิบายย่อ (เพื่อให้นักศึกษาเข้าใจง่ายขึ้น)
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="เช่น ใช้สำหรับลงทะเบียนเรียน เพิ่ม-ถอนรายวิชา และตรวจสอบผลการเรียน"
+                          value={linkDesc}
+                          onChange={(e) => setLinkDesc(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm transition-all"
+                        />
+                      </div>
+
+                      {/* Thumbnail Image section with Upload, Drop & Paste (Ctrl+V) support */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between flex-wrap gap-2">
+                          <span className="flex items-center gap-1.5">
+                            <FileImage className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
+                            <span>รูปภาพประกอบลิงก์ (Thumbnail)</span>
+                          </span>
+                          <span className="text-[10px] bg-rose-50 dark:bg-rose-950/60 text-[#5c0620] dark:text-rose-300 px-2 py-0.5 rounded-md font-bold border border-rose-200/50 dark:border-rose-800/40">
+                            ขนาดแนะนำ 16:10 (Auto-crop)
+                          </span>
+                        </label>
+
                         {/* Hidden File Input */}
                         <input
                           type="file"
@@ -2067,15 +2158,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           onClick={() => fileInputRef.current?.click()}
                           className={`h-[120px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-2.5 text-center cursor-pointer transition-all ${
                             isDragging
-                              ? "border-rose-900 bg-rose-50/70"
+                              ? "border-[#5c0620] bg-rose-50/70 dark:bg-rose-950/40"
                               : linkThumbnailUrl && linkThumbnailUrl.startsWith("data:image")
-                              ? "border-rose-300 bg-white"
-                              : "border-slate-200 hover:border-rose-900 hover:bg-rose-50 bg-white"
+                              ? "border-rose-300 bg-white dark:bg-[#252125]"
+                              : "border-slate-200 dark:border-white/10 hover:border-[#5c0620] hover:bg-rose-50/40 bg-slate-50/50 dark:bg-[#252125]"
                           }`}
                         >
                           {isProcessingImage ? (
                             <div className="space-y-1.5">
-                              <RefreshCw className="w-5 h-5 animate-spin text-rose-900 mx-auto" />
+                              <RefreshCw className="w-5 h-5 animate-spin text-[#5c0620] dark:text-rose-400 mx-auto" />
                               <p className="text-[10px] text-slate-500 font-bold">กำลังปรับขนาดรูป...</p>
                             </div>
                           ) : linkThumbnailUrl ? (
@@ -2087,8 +2178,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 className="w-full h-full object-cover"
                               />
                               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
-                                <span className="text-[9px] text-white bg-rose-900/90 px-2 py-1 rounded-md font-bold flex items-center gap-1">
-                                  <Upload className="w-3 h-3" />
+                                <span className="text-[10px] text-white bg-[#5c0620]/90 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1.5">
+                                  <Upload className="w-3.5 h-3.5" />
                                   <span>คลิกเพื่อเปลี่ยนรูป</span>
                                 </span>
                               </div>
@@ -2100,239 +2191,293 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   e.stopPropagation();
                                   setLinkThumbnailUrl("");
                                 }}
-                                className="absolute top-1 right-1 p-1 bg-white/95 hover:bg-rose-50 text-rose-900 rounded-full shadow-xs hover:scale-105 transition-all"
+                                className="absolute top-1.5 right-1.5 p-1 bg-white/95 hover:bg-rose-50 text-rose-900 rounded-full shadow-xs hover:scale-105 transition-all cursor-pointer"
                                 title="ลบภาพประกอบ"
                               >
-                                <X className="w-3 h-3" />
+                                <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           ) : (
                             <div className="space-y-1">
                               <Upload className="w-5 h-5 text-slate-400 mx-auto" />
-                              <p className="text-[11px] font-bold text-slate-700">คลิกเพื่อเลือกไฟล์</p>
-                              <p className="text-[9px] text-slate-400 font-light">หรือลากวาง / กด Ctrl+V</p>
+                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">คลิกเพื่อเลือกไฟล์ หรือ ลากวาง</p>
+                              <p className="text-[10px] text-slate-400">หรือกด <kbd className="bg-white dark:bg-black/30 px-1 py-0.5 rounded border border-slate-200 dark:border-white/10 font-mono text-[9px]">Ctrl + V</kbd> เพื่อวางภาพที่คัดลอกมา</p>
                             </div>
                           )}
                         </div>
                       </div>
+
+                      {/* Submit button */}
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="w-full min-h-[50px] bg-[#5c0620] hover:bg-[#780829] text-white text-sm font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-[#5c0620]/20 disabled:opacity-50 cursor-pointer active:scale-98"
+                        >
+                          {isSubmitting ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Save className="w-4 h-4" />
+                          )}
+                          <span>{editingLinkId ? "บันทึกการแก้ไขลิงก์" : "เพิ่มลิงก์เข้าสู่ระบบ"}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 dark:bg-amber-950/40 p-6 rounded-[28px] border border-amber-200/80 dark:border-amber-800/40 text-center space-y-2">
+                    <ShieldAlert className="w-8 h-8 text-amber-500 mx-auto opacity-75" />
+                    <h3 className="font-bold text-amber-800 dark:text-amber-300">ไม่มีสิทธิ์เพิ่มหรือแก้ไขลิงก์ในระบบส่วนกลาง</h3>
+                    <p className="text-xs text-amber-700/80 dark:text-amber-400/80">บัญชีระดับ Admin สามารถจัดการการ <strong>"ปักหมุดส่วนตัว"</strong> ในตารางด้านขวาได้เท่านั้น</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Bento Card - Existing Links List & Reordering Controls */}
+              <div className="xl:col-span-7">
+                <div className="bg-white dark:bg-[#1a171a] p-6 sm:p-7 rounded-[28px] border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
+                  
+                  {/* List Header & Controls */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2.5 h-6 bg-[#5c0620] dark:bg-rose-600 rounded-full"></div>
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                          <span>รายการลิงก์ในระบบทั้งหมด</span>
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
+                            {orderedLinks.length}
+                          </span>
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          ลำดับที่แสดงตรงนี้คือลำดับจริงที่แสดงผลบนหน้าแรก
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Search & Category filter */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="ค้นหาลิงก์..."
+                          value={linksTabSearch}
+                          onChange={(e) => setLinksTabSearch(e.target.value)}
+                          className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 font-medium"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center bg-slate-100 dark:bg-white/5 p-1 rounded-xl gap-0.5 border border-slate-200/60 dark:border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setLinksTabCategory("all")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            linksTabCategory === "all" ? "bg-white dark:bg-[#252125] text-slate-900 dark:text-white shadow-2xs" : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
+                          }`}
+                        >
+                          ทั้งหมด
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLinksTabCategory("faculty")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            linksTabCategory === "faculty" ? "bg-white dark:bg-[#252125] text-[#5c0620] dark:text-rose-400 shadow-2xs" : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
+                          }`}
+                        >
+                          คณะวิทย์ฯ
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLinksTabCategory("university")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            linksTabCategory === "university" ? "bg-white dark:bg-[#252125] text-indigo-600 dark:text-indigo-400 shadow-2xs" : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
+                          }`}
+                        >
+                          มหาวิทยาลัย
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="col-span-1 md:col-span-2 flex justify-end gap-2.5 pt-2">
-                    {editingLinkId && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingLinkId(null);
-                          setLinkTitle("");
-                          setLinkUrl("");
-                          setLinkDesc("");
-                          setLinkIsStaffOnly(false);
-                          setLinkTargetAudience('both');
-                          setLinkThumbnailUrl("");
-                        }}
-                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all"
-                      >
-                        ยกเลิกแก้ไข
-                      </button>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="px-5 py-2 bg-rose-900 hover:bg-rose-950 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-sm shadow-rose-900/10 disabled:opacity-50 cursor-pointer"
-                    >
-                      {isSubmitting ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                      <span>{editingLinkId ? "บันทึกการแก้ไข" : "เพิ่มลิงก์เข้าสู่ระบบ"}</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
-              ) : (
-                 <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100 text-center space-y-2">
-                    <ShieldAlert className="w-8 h-8 text-amber-500 mx-auto opacity-75" />
-                    <h3 className="font-bold text-amber-800">ไม่มีสิทธิ์เพิ่มหรือแก้ไขลิงก์ในระบบส่วนกลาง</h3>
-                    <p className="text-sm text-amber-700/80">บัญชีระดับ Admin สามารถจัดการการ <strong>"ปักหมุดส่วนตัว"</strong> ในตารางด้านล่างได้เท่านั้น</p>
-                 </div>
-              )}
-
-              {/* Existing Links List with Drag & Drop and Move Buttons */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2 flex-wrap pb-1">
-                  <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 pl-1 flex items-center gap-2">
-                    <ArrowUpDown className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
-                    <span>รายการลิงก์ในระบบทั้งหมด (จัดเรียงลำดับ)</span>
-                    <span className="text-xs font-normal text-slate-500 bg-slate-200/60 dark:bg-white/10 dark:text-slate-300 px-2 py-0.5 rounded-full">{orderedLinks.length} รายการ</span>
-                  </h4>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <span className="bg-rose-50 dark:bg-rose-950/40 text-[#5c0620] dark:text-rose-300 px-2.5 py-1 rounded-lg border border-rose-100 dark:border-rose-900/40 font-medium flex items-center gap-1.5">
-                      <GripVertical className="w-3.5 h-3.5" />
-                      <span>ลากสลับตำแหน่ง ⠿ หรือกด ⬆️ ⬇️ เพื่อโยกย้ายลำดับ</span>
+                  {/* Reordering Guide Pill */}
+                  <div className="bg-rose-50/70 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs text-[#5c0620] dark:text-rose-300 font-medium flex-wrap gap-2">
+                    <span className="flex items-center gap-2">
+                      <GripVertical className="w-4 h-4 shrink-0" />
+                      <span><strong>วิธีโยกย้าย:</strong> คลิกค้างที่ปุ่ม <strong>⠿</strong> แล้วลากสลับตำแหน่ง หรือกดปุ่ม <strong>⬆️ ⬇️</strong> เพื่อเลื่อนขึ้น/ลงทีละขั้น</span>
+                    </span>
+                    <span className="text-[11px] font-bold bg-white/80 dark:bg-black/30 px-2 py-0.5 rounded-lg border border-rose-200/60 dark:border-rose-800/40">
+                      Auto-sync
                     </span>
                   </div>
-                </div>
 
-                <div className="bg-white dark:bg-[#1e1b1e] rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs overflow-hidden">
-                  {orderedLinks.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 space-y-2">
-                      <Info className="w-8 h-8 mx-auto opacity-40" />
-                      <p className="text-sm">ยังไม่มีลิงก์ใดๆ ในระบบ คลิกแบบฟอร์มด้านบนเพื่อเพิ่มลิงก์แรก</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-[460px] overflow-y-auto">
-                      {orderedLinks.map((link, index) => {
-                        const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
-                        const cat = link.category || 'faculty';
-                        const isFirst = index === 0;
-                        const isLast = index === orderedLinks.length - 1;
-                        const isBeingDragged = draggedIndex === index;
-                        const isTargetDrag = dragOverIndex === index;
+                  {/* Links Scrollable Container */}
+                  <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden bg-white dark:bg-[#1a171a]">
+                    {displayedOrderedLinks.length === 0 ? (
+                      <div className="p-12 text-center text-slate-400 space-y-2">
+                        <Info className="w-8 h-8 mx-auto opacity-40" />
+                        <p className="text-sm font-semibold">ไม่พบรายการลิงก์ที่ตรงกับคำค้นหาหรือเงื่อนไข</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-[580px] overflow-y-auto">
+                        {displayedOrderedLinks.map((link) => {
+                          const originalIndex = orderedLinks.findIndex(l => l.id === link.id);
+                          const isFirst = originalIndex === 0;
+                          const isLast = originalIndex === orderedLinks.length - 1;
+                          const isBeingDragged = draggedIndex === originalIndex;
+                          const isTargetDrag = dragOverIndex === originalIndex;
+                          const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
+                          const cat = link.category || 'faculty';
 
-                        return (
-                          <div 
-                            key={link.id} 
-                            onDragOver={(e) => handleLinkDragOver(e, index)}
-                            onDrop={(e) => handleLinkDrop(e, index)}
-                            className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-all ${
-                              isBeingDragged 
-                                ? "opacity-30 bg-slate-100 dark:bg-white/10" 
-                                : isTargetDrag 
-                                  ? "border-t-2 border-[#5c0620] dark:border-rose-500 bg-rose-50/50 dark:bg-rose-950/30" 
-                                  : "hover:bg-slate-50/70 dark:hover:bg-white/5"
-                            }`}
-                          >
-                            <div className="min-w-0 flex-1 flex items-center gap-2.5 sm:gap-3">
-                              {/* Reorder Controls: Drag handle + Order index + Up/Down arrows */}
-                              {currentUser?.role === "superadmin" && (
-                                <div className="flex items-center gap-1 shrink-0">
-                                  {/* Drag Handle */}
-                                  <div
-                                    draggable
-                                    onDragStart={(e) => handleLinkDragStart(e, index)}
-                                    onDragEnd={handleLinkDragEnd}
-                                    className="p-1 text-slate-300 dark:text-slate-600 hover:text-slate-700 dark:hover:text-white cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-colors select-none"
-                                    title="คลิกค้างแล้วลากเพื่อสลับลำดับ"
-                                  >
-                                    <GripVertical className="w-4 h-4" />
+                          return (
+                            <div
+                              key={link.id}
+                              onDragOver={(e) => handleLinkDragOver(e, originalIndex)}
+                              onDrop={(e) => handleLinkDrop(e, originalIndex)}
+                              className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-all ${
+                                isBeingDragged
+                                  ? "opacity-30 bg-slate-100 dark:bg-white/10"
+                                  : isTargetDrag
+                                  ? "border-t-2 border-[#5c0620] dark:border-rose-500 bg-rose-50/50 dark:bg-rose-950/30"
+                                  : "hover:bg-slate-50/80 dark:hover:bg-white/5"
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1 flex items-center gap-3">
+                                {/* Reorder Controls: Large Drag Handle + Big Up/Down Buttons */}
+                                {currentUser?.role === "superadmin" && (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {/* Drag Handle */}
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => handleLinkDragStart(e, originalIndex)}
+                                      onDragEnd={handleLinkDragEnd}
+                                      className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-white/10 cursor-grab active:cursor-grabbing transition-colors select-none"
+                                      title="คลิกค้างแล้วลากเพื่อสลับลำดับ"
+                                    >
+                                      <GripVertical className="w-5 h-5" />
+                                    </div>
+
+                                    {/* Up / Down Buttons */}
+                                    <div className="flex flex-col gap-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleMoveLink(originalIndex, originalIndex - 1)}
+                                        disabled={isFirst || isSavingOrder}
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition-colors disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                                        title="เลื่อนขึ้น 1 อันดับ"
+                                      >
+                                        <ChevronUp className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleMoveLink(originalIndex, originalIndex + 1)}
+                                        disabled={isLast || isSavingOrder}
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition-colors disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                                        title="เลื่อนลง 1 อันดับ"
+                                      >
+                                        <ChevronDown className="w-4 h-4" />
+                                      </button>
+                                    </div>
                                   </div>
+                                )}
 
-                                  {/* Quick Up/Down buttons */}
-                                  <div className="flex flex-col">
+                                {/* Order Badge */}
+                                <span className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-xs flex items-center justify-center shrink-0 font-mono shadow-2xs">
+                                  #{originalIndex + 1}
+                                </span>
+
+                                {/* Thumbnail preview */}
+                                <div className="w-14 h-10 rounded-xl bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-200 dark:border-white/10 hidden sm:block">
+                                  <img 
+                                    src={link.thumbnailUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=100&auto=format&fit=crop"} 
+                                    alt="" 
+                                    referrerPolicy="no-referrer"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate max-w-[220px] sm:max-w-xs">{link.title}</span>
+                                    
+                                    {cat === 'university' ? (
+                                      <span className="px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-full inline-flex items-center gap-1 border border-indigo-200/60 dark:border-indigo-800/40">
+                                        <Building2 className="w-2.5 h-2.5" />
+                                        มหาวิทยาลัย
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 rounded-full inline-flex items-center gap-1 border border-emerald-200/60 dark:border-emerald-800/40">
+                                        <FlaskConical className="w-2.5 h-2.5" />
+                                        คณะวิทย์ฯ
+                                      </span>
+                                    )}
+
+                                    {aud === 'staff' ? (
+                                      <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#5c0620] dark:bg-rose-700 rounded-full inline-flex items-center gap-1">
+                                        <Briefcase className="w-2.5 h-2.5" />
+                                        เฉพาะบุคลากร
+                                      </span>
+                                    ) : aud === 'student' ? (
+                                      <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-sky-600 rounded-full inline-flex items-center gap-1">
+                                        <GraduationCap className="w-2.5 h-2.5" />
+                                        เฉพาะนักศึกษา
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-white/10 rounded-full inline-flex items-center gap-1">
+                                        <Users className="w-2.5 h-2.5" />
+                                        ทั้ง 2 กลุ่ม
+                                      </span>
+                                    )}
+
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-semibold">
+                                      ({link.clickCount || 0} คลิก)
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">{link.url}</p>
+                                </div>
+                              </div>
+
+                              {/* Action Buttons: Pin, Edit, Delete (Large Tactile Buttons) */}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => togglePinStatus(link)}
+                                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                                    (currentUser?.role === "superadmin" ? link.isPinned : currentUser?.pinnedLinks?.includes(link.id))
+                                      ? "bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs" 
+                                      : "hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-slate-200/60 dark:border-white/10"
+                                  }`}
+                                  title={(currentUser?.role === "superadmin" ? link.isPinned : currentUser?.pinnedLinks?.includes(link.id)) ? "ยกเลิกปักหมุด" : "ปักหมุดไว้บนสุด"}
+                                >
+                                  <Pin className="w-4 h-4" />
+                                </button>
+                                
+                                {currentUser?.role === "superadmin" && (
+                                  <>
                                     <button
                                       type="button"
-                                      onClick={() => handleMoveLink(index, index - 1)}
-                                      disabled={isFirst || isSavingOrder}
-                                      className="p-0.5 text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded transition-colors disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                                      title="เลื่อนขึ้น 1 อันดับ"
+                                      onClick={() => startEditLink(link)}
+                                      className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200/70 dark:border-amber-800/50 transition-all cursor-pointer shadow-2xs"
+                                      title="แก้ไขข้อมูลลิงก์"
                                     >
-                                      <ChevronUp className="w-3.5 h-3.5" />
+                                      <Edit2 className="w-4 h-4" />
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => handleMoveLink(index, index + 1)}
-                                      disabled={isLast || isSavingOrder}
-                                      className="p-0.5 text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded transition-colors disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                                      title="เลื่อนลง 1 อันดับ"
+                                      onClick={() => setLinkToDelete({ id: link.id, title: link.title })}
+                                      className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200/70 dark:border-rose-800/50 transition-all cursor-pointer shadow-2xs"
+                                      title="ลบลิงก์"
                                     >
-                                      <ChevronDown className="w-3.5 h-3.5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Order Badge */}
-                              <span className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center justify-center shrink-0 font-mono shadow-2xs">
-                                #{index + 1}
-                              </span>
-
-                              {/* Small thumbnail preview in admin list */}
-                              <div className="w-12 h-9 sm:w-14 sm:h-10 rounded-md bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-150 dark:border-white/10 hidden xs:block">
-                                <img 
-                                  src={link.thumbnailUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=100&auto=format&fit=crop"} 
-                                  alt="" 
-                                  referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                  <span className="font-semibold text-slate-800 dark:text-white text-xs sm:text-sm truncate max-w-[200px] sm:max-w-[260px]">{link.title}</span>
-                                  {cat === 'university' ? (
-                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-full inline-flex items-center gap-1 border border-indigo-200/50 dark:border-indigo-800/40">
-                                      <Building2 className="w-2.5 h-2.5" />
-                                      มหาวิทยาลัย
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 rounded-full inline-flex items-center gap-1 border border-emerald-200/50 dark:border-emerald-800/40">
-                                      <FlaskConical className="w-2.5 h-2.5" />
-                                      คณะวิทย์ฯ
-                                    </span>
-                                  )}
-                                  {aud === 'staff' ? (
-                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-white bg-[#5c0620] dark:bg-rose-700 rounded-full inline-flex items-center gap-1">
-                                      <Briefcase className="w-2.5 h-2.5" />
-                                      เฉพาะบุคลากร
-                                    </span>
-                                  ) : aud === 'student' ? (
-                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-white bg-sky-600 rounded-full inline-flex items-center gap-1">
-                                      <GraduationCap className="w-2.5 h-2.5" />
-                                      เฉพาะนักศึกษา
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-white/10 rounded-full inline-flex items-center gap-1">
-                                      <Users className="w-2.5 h-2.5" />
-                                      ทั้ง 2 กลุ่ม
-                                    </span>
-                                  )}
-                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                                    ({link.clickCount || 0} คลิก)
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">{link.url}</p>
+                                  </>
+                                )}
                               </div>
                             </div>
-
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => togglePinStatus(link)}
-                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                  (currentUser?.role === "superadmin" ? link.isPinned : currentUser?.pinnedLinks?.includes(link.id))
-                                    ? "bg-rose-100 text-rose-700 hover:bg-rose-200" 
-                                    : "hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-                                }`}
-                                title={(currentUser?.role === "superadmin" ? link.isPinned : currentUser?.pinnedLinks?.includes(link.id)) ? "ยกเลิกปักหมุด" : "ปักหมุดไว้บนสุด"}
-                              >
-                                <Pin className="w-3.5 h-3.5" />
-                              </button>
-                              
-                              {currentUser?.role === "superadmin" && (
-                                <>
-                                  <button
-                                    onClick={() => startEditLink(link)}
-                                    className="p-1.5 hover:bg-amber-50 text-amber-500 hover:text-amber-700 rounded-lg transition-colors cursor-pointer"
-                                    title="แก้ไขข้อมูลลิงก์"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => setLinkToDelete({ id: link.id, title: link.title })}
-                                    className="p-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition-colors cursor-pointer"
-                                    title="ลบลิงก์"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -2394,7 +2539,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Field 1: Staff Account Name */}
                     <div className="space-y-1.5 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-700 block">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                         ชื่อบัญชี / ชื่อบุคลากร <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -2403,16 +2548,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         placeholder="เช่น อ.สมชาย ใจดี หรือ งานวิชาการ"
                         value={newStaffPasswordLabel}
                         onChange={(e) => setNewStaffPasswordLabel(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm bg-slate-50/50 focus:bg-white transition-colors"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 dark:focus:ring-rose-500/30 focus:border-[#5c0620] dark:focus:border-rose-500 text-sm bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
                       />
-                      <span className="text-[11px] text-slate-400 block">
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 block">
                         ชื่อนี้จะถูกแสดงเมื่อเข้าใช้งาน
                       </span>
                     </div>
 
                     {/* Field 2: Password */}
                     <div className="space-y-1.5 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-700 block">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                         รหัสผ่านเข้าใช้งาน (Password) <span className="text-rose-500">*</span>
                       </label>
                       <div className="flex gap-2">
@@ -2422,26 +2567,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           placeholder="เช่น sci2025 หรือ staff1234"
                           value={newStaffPassword}
                           onChange={(e) => setNewStaffPassword(e.target.value)}
-                          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm font-mono bg-slate-50/50 focus:bg-white transition-colors"
+                          className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 dark:focus:ring-rose-500/30 focus:border-[#5c0620] dark:focus:border-rose-500 text-sm font-mono bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
                         />
                         <button
                           type="button"
                           onClick={handleGenerateRandomStaffCode}
-                          className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                          className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                           title="สุ่มรหัสผ่านอัตโนมัติ"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                           <span>สุ่มรหัส</span>
                         </button>
                       </div>
-                      <span className="text-[11px] text-slate-400 block">
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 block">
                         รหัสสำหรับปลดล็อกโหมดบุคลากร
                       </span>
                     </div>
 
                     {/* Field 3: Department / Note */}
                     <div className="space-y-1.5 md:col-span-1">
-                      <label className="text-xs font-bold text-slate-700 block">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                         สาขาวิชา / ฝ่ายงาน (ระบุหรือไม่ก็ได้)
                       </label>
                       <input
@@ -2449,9 +2594,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         placeholder="เช่น สาขาวิชาวิทยาการคอมพิวเตอร์"
                         value={newStaffDepartment}
                         onChange={(e) => setNewStaffDepartment(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 focus:border-[#5c0620] text-sm bg-slate-50/50 focus:bg-white transition-colors"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 focus:outline-hidden focus:ring-2 focus:ring-[#5c0620]/20 dark:focus:ring-rose-500/30 focus:border-[#5c0620] dark:focus:border-rose-500 text-sm bg-slate-50/50 dark:bg-[#252125] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-colors"
                       />
-                      <span className="text-[11px] text-slate-400 block">
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 block">
                         ข้อมูลสังกัดสำหรับจัดกลุ่ม
                       </span>
                     </div>
@@ -2461,7 +2606,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <button
                       type="submit"
                       disabled={isSubmitting || !newStaffPassword.trim() || !newStaffPasswordLabel.trim()}
-                      className="px-6 py-2.5 bg-[#5c0620] hover:bg-rose-950 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-[#5c0620]/20 disabled:opacity-50 cursor-pointer"
+                      className="px-6 py-2.5 bg-[#5c0620] hover:bg-rose-950 dark:bg-rose-600 dark:hover:bg-rose-700 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-[#5c0620]/20 disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? (
                         <RefreshCw className="w-4 h-4 animate-spin" />
@@ -2505,13 +2650,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 {staffPasswordItems.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-rose-50 text-[#5c0620] flex items-center justify-center mx-auto">
+                  <div className="py-12 text-center text-slate-400 dark:text-slate-500 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-[#5c0620] dark:text-rose-300 flex items-center justify-center mx-auto">
                       <Briefcase className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-700">ยังไม่มีบัญชีบุคลากรในระบบ</p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">ยังไม่มีบัญชีบุคลากรในระบบ</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                         กรุณาเพิ่มชื่อบัญชีและรหัสผ่านในแบบฟอร์มด้านบนเพื่อให้บุคลากรใช้เข้าดูระบบเฉพาะบุคลากรได้
                       </p>
                     </div>
@@ -2586,7 +2731,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               >
                                 {copiedCodeId === item.id ? (
                                   <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                     <span>คัดลอกแล้ว</span>
                                   </>
                                 ) : (
@@ -2602,7 +2747,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 type="button"
                                 onClick={() => handleRemoveStaffPassword(item)}
                                 disabled={isSubmitting}
-                                className="p-2 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-100"
+                                className="w-8 h-8 flex items-center justify-center text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-300 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-rose-100 dark:hover:border-rose-900/40"
                                 title="ลบบัญชีนี้"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -2620,57 +2765,114 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {/* TAB: GOOGLE SHEETS */}
           {activeTab === "sheets" && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-6">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="p-2.5 bg-emerald-500 text-white rounded-2xl">
-                    <Grid className="w-5 h-5" />
+              {/* Header Overview Banner */}
+              <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 text-emerald-300">
+                    <Grid className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800 dark:text-white">เชื่อมต่อและจัดการข้อมูลผ่าน Google Sheets</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">บันทึกข้อมูลลิงก์ทั้งหมดไปยัง Google Sheets แบบเรียลไทม์ (ผ่าน Web App Script)</p>
+                    <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                      <span>เชื่อมต่อและจัดการข้อมูลผ่าน Google Sheets</span>
+                      <span className="text-xs bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 px-2.5 py-0.5 rounded-full font-normal">
+                        Realtime Database
+                      </span>
+                    </h3>
+                    <p className="text-xs text-emerald-100/80 mt-0.5">
+                      บันทึกข้อมูลลิงก์ โลโก้ และประกาศไปยัง Google Sheets ผ่าน Web App Script แบบอัตโนมัติ
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-4 max-w-xl">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">เปิดใช้งานการซิงค์ข้อมูลกับ Google Sheets</label>
-                    <label className="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={adminConfig.isGoogleSheetSyncEnabled || false}
-                        onChange={(e) => onUpdateConfig({ isGoogleSheetSyncEnabled: e.target.checked })}
-                        className="w-4 h-4 text-emerald-600 bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-white/20 rounded focus:ring-emerald-500"
-                      />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">เปิดการซิงค์ข้อมูลอัตโนมัติ</span>
-                    </label>
-                  </div>
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 self-start sm:self-auto">
+                  <div className={`w-2.5 h-2.5 rounded-full ${adminConfig.isGoogleSheetSyncEnabled && adminConfig.googleAppsScriptUrl ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`}></div>
+                  <span className="text-xs text-emerald-100">สถานะ:</span>
+                  <span className="text-xs font-bold text-white">
+                    {adminConfig.isGoogleSheetSyncEnabled && adminConfig.googleAppsScriptUrl ? "เชื่อมต่อเรียลไทม์" : "ไม่ได้เปิดการซิงค์"}
+                  </span>
+                </div>
+              </div>
 
-                  {adminConfig.isGoogleSheetSyncEnabled && (
-                    <div className="space-y-4 pt-2">
+              {/* Bento 2-Column Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                
+                {/* Left Bento: Connection & Actions */}
+                <div className="xl:col-span-6 space-y-6">
+                  <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                      <div className="w-2.5 h-6 bg-emerald-500 rounded-full"></div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                          การตั้งค่าการเชื่อมต่อ (Sync Settings)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          กำหนด URL และรอบเวลาการอัปเดตข้อมูลกับ Google Sheets
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Sync Toggle */}
                       <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">Google Apps Script Web App URL</label>
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          เปิดใช้งานการซิงค์ข้อมูลกับ Google Sheets
+                        </label>
+                        <label className={`flex items-center gap-3 cursor-pointer p-4 border rounded-2xl transition-all ${
+                          adminConfig.isGoogleSheetSyncEnabled 
+                            ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800' 
+                            : 'border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={adminConfig.isGoogleSheetSyncEnabled || false}
+                            onChange={(e) => onUpdateConfig({ isGoogleSheetSyncEnabled: e.target.checked })}
+                            className="w-5 h-5 text-emerald-600 rounded-lg border-slate-300 dark:border-white/20 focus:ring-emerald-500"
+                          />
+                          <div>
+                            <span className="text-sm font-bold text-slate-800 dark:text-white block">
+                              เปิดการซิงค์ข้อมูลอัตโนมัติ
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              เมื่อเปิดใช้งาน ลิงก์ที่เพิ่มหรือแก้ไขจะถูกส่งไปยัง Google Sheets ทันที
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Web App URL */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          Google Apps Script Web App URL
+                        </label>
                         <input
                           type="text"
                           placeholder="https://script.google.com/macros/s/.../exec"
                           value={adminConfig.googleAppsScriptUrl || ""}
                           onChange={(e) => onUpdateConfig({ googleAppsScriptUrl: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-mono"
+                          className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-xs font-mono transition-colors"
                         />
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 block">
+                          URL ที่ได้จากการ Deploy Web App บน Google Apps Script
+                        </span>
                       </div>
                       
+                      {/* Interval */}
                       <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-slate-600 block">ความถี่ในการดึงข้อมูลอัปเดต (วินาที)</label>
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          ความถี่ในการดึงข้อมูลอัปเดต (วินาที)
+                        </label>
                         <input
                           type="number"
                           min="5"
                           placeholder="10"
                           value={adminConfig.syncInterval || 5}
                           onChange={(e) => onUpdateConfig({ syncInterval: parseInt(e.target.value, 10) || 5 })}
-                          className="w-full max-w-[150px] px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-mono"
+                          className="w-full max-w-[160px] px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-mono transition-colors"
                         />
                       </div>
 
-                      <div className="pt-2 flex flex-wrap items-center gap-3">
+                      {/* Action Buttons */}
+                      <div className="pt-3 space-y-3">
                         <button
                           type="button"
                           onClick={async () => {
@@ -2701,7 +2903,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             }
                           }}
                           disabled={isSubmitting}
-                          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                          className="w-full min-h-[48px] px-5 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-sm font-bold rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                         >
                           {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                           <span>ซิงค์ข้อมูลทั้งหมดไปยัง Google Sheets ทันที</span>
@@ -2742,44 +2944,62 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             }
                           }}
                           disabled={isSubmitting}
-                          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                          className="w-full min-h-[48px] px-5 py-3 bg-sky-600 hover:bg-sky-700 active:scale-[0.99] text-white text-sm font-bold rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                         >
                           <RefreshCw className="w-4 h-4" />
-                          <span>ดึงข้อมูลล่าสุดจาก Google Sheets</span>
+                          <span>ดึงข้อมูลล่าสุดจาก Google Sheets มายังหน้านี้</span>
                         </button>
                       </div>
+                    </div>
+                  </div>
+                </div>
 
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 mt-4">
-                        <h4 className="text-sm font-bold text-slate-700">โค้ดสำหรับ Google Apps Script</h4>
-                        <ol className="text-xs text-slate-600 list-decimal list-inside space-y-1.5 mb-2">
-                          <li>เปิด Google Sheets ของคุณ ไปที่เมนู <strong>ส่วนขยาย (Extensions)</strong> {'>'} <strong>Apps Script</strong></li>
-                          <li>คัดลอกโค้ดด้านล่างไปวางแทนที่ของเดิม (สามารถระบุ SPREADSHEET_ID ได้ถ้าต้องการ)</li>
-                          <li>กด <strong>การทำให้ใช้งานได้ (Deploy)</strong> {'>'} <strong>การทำให้ใช้งานได้รายการใหม่ (New deployment)</strong></li>
-                          <li>เลือกประเภท <strong>เว็บแอป (Web app)</strong></li>
-                          <li>ตั้งค่า <strong>ผู้ที่มีสิทธิ์เข้าถึง: ทุกคน (Anyone)</strong> และกด <strong>ทำให้ใช้งานได้</strong></li>
-                          <li>คัดลอก <strong>URL ของเว็บแอป</strong> มาใส่ในช่องด้านบน</li>
-                        </ol>
-
-                        <div className="relative">
-                          <textarea
-                            readOnly
-                            className="w-full h-48 p-3 text-[10px] font-mono text-slate-600 bg-white rounded-lg border border-slate-200 focus:outline-hidden resize-none"
-                            value={GAS_SCRIPT_TEMPLATE}
-                          />
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(GAS_SCRIPT_TEMPLATE);
-                              showAlert("คัดลอกสคริปต์แล้ว");
-                            }}
-                            className="absolute top-2 right-2 px-2 py-1 bg-white border border-slate-200 text-xs rounded-md shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-1 cursor-pointer"
-                          >
-                            คัดลอก
-                          </button>
-                        </div>
+                {/* Right Bento: Setup Guide & Code */}
+                <div className="xl:col-span-6 space-y-6">
+                  <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                      <div className="w-2.5 h-6 bg-teal-500 rounded-full"></div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                          คู่มือติดตั้ง Google Apps Script (Setup Guide)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          ขั้นตอนคัดลอกและเผยแพร่ Web App บน Google Sheets ของคุณ
+                        </p>
                       </div>
                     </div>
-                  )}
+
+                    <div className="bg-slate-50 dark:bg-[#252125] p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3">
+                      <ol className="text-xs text-slate-600 dark:text-slate-300 list-decimal list-inside space-y-2 leading-relaxed">
+                        <li>เปิด Google Sheets ของคุณ ไปที่เมนู <strong>ส่วนขยาย (Extensions)</strong> &gt; <strong>Apps Script</strong></li>
+                        <li>คัดลอกโค้ดด้านล่างไปวางแทนที่ของเดิมใน Apps Script</li>
+                        <li>กด <strong>การทำให้ใช้งานได้ (Deploy)</strong> &gt; <strong>การทำให้ใช้งานได้รายการใหม่ (New deployment)</strong></li>
+                        <li>เลือกประเภท <strong>เว็บแอป (Web app)</strong></li>
+                        <li>ตั้งค่า <strong>ผู้ที่มีสิทธิ์เข้าถึง: ทุกคน (Anyone)</strong> และกด <strong>ทำให้ใช้งานได้</strong></li>
+                        <li>คัดลอก <strong>URL ของเว็บแอป</strong> มาใส่ในช่องฝั่งซ้ายมือ</li>
+                      </ol>
+
+                      <div className="relative pt-2">
+                        <textarea
+                          readOnly
+                          className="w-full h-56 p-3 text-[11px] font-mono text-slate-700 dark:text-emerald-300 bg-white dark:bg-[#161316] rounded-xl border border-slate-200 dark:border-white/10 focus:outline-hidden resize-none leading-relaxed"
+                          value={GAS_SCRIPT_TEMPLATE}
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(GAS_SCRIPT_TEMPLATE);
+                            showAlert("คัดลอกสคริปต์ Google Apps Script แล้ว");
+                          }}
+                          className="absolute top-4 right-3 px-3 py-1.5 bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs font-bold rounded-lg shadow-sm hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>คัดลอกโค้ด</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
               </div>
             </div>
           )}
@@ -2787,319 +3007,320 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {/* TAB 3: SECURITY SETTINGS */}
           {activeTab === "security" && (
             <div className="space-y-6">
-              {/* Site Info Config */}
-              <div className="bg-white dark:bg-[#1e1b1e] p-5 rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs space-y-6">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="p-2.5 bg-indigo-500 text-white rounded-2xl">
-                    <Grid className="w-5 h-5" />
+              {/* Header Overview Banner */}
+              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 text-indigo-300">
+                    <ShieldCheck className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800 dark:text-white">จัดการข้อมูลเว็บไซต์หน้าบ้าน (Site Info)</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">ตั้งชื่อและโลโก้ที่แสดงบนแท็บของเบราว์เซอร์</p>
+                    <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                      <span>ตั้งค่าระบบ ความปลอดภัย และข้อมูลเว็บไซต์</span>
+                      <span className="text-xs bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2.5 py-0.5 rounded-full font-normal">
+                        Security & System
+                      </span>
+                    </h3>
+                    <p className="text-xs text-indigo-100/80 mt-0.5">
+                      จัดการชื่อเว็บไซต์ โลโก้ ข้อความประกาศด่วน รหัสผ่าน และการสำรองถ่ายโอนข้อมูล
+                    </p>
                   </div>
                 </div>
 
-                <form onSubmit={handleSiteInfoSubmit} className="space-y-4 max-w-xl">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">ชื่อเว็บไซต์ (Site Title)</label>
-                    <input
-                      type="text"
-                      placeholder="เช่น ระบบพอร์ทัลลิงก์สำคัญ FST"
-                      value={siteTitle}
-                      onChange={(e) => setSiteTitle(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
-                    />
-                  </div>
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 self-start sm:self-auto text-xs text-indigo-100">
+                  <Lock className="w-4 h-4 text-indigo-300" />
+                  <span>เข้าสู่ระบบเป็น:</span>
+                  <span className="font-bold text-white">{currentUser?.username}</span>
+                </div>
+              </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 block">โลโก้ (Favicon & Tab Icon)</label>
-                    <div className="flex gap-4 items-center">
-                      {siteLogoUrl && (
-                        <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
-                          <img src={siteLogoUrl} alt="Logo" className="w-8 h-8 object-contain" />
-                        </div>
-                      )}
-                      <div className="flex-1 space-y-2">
+              {/* Bento 2-Column Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+                {/* Left Column (xl:col-span-6) */}
+                <div className="xl:col-span-6 space-y-6">
+                  {/* Site Info Config */}
+                  <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                      <div className="w-2.5 h-6 bg-indigo-500 rounded-full"></div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                          ข้อมูลเว็บไซต์ & โลโก้ (Site Info)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          ตั้งชื่อและโลโก้ที่แสดงบนแท็บของเบราว์เซอร์
+                        </p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleSiteInfoSubmit} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          ชื่อเว็บไซต์ (Site Title)
+                        </label>
                         <input
                           type="text"
-                          placeholder="วาง URL ของรูปภาพโลโก้ที่นี่"
-                          value={siteLogoUrl}
-                          onChange={(e) => setSiteLogoUrl(e.target.value)}
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
+                          placeholder="เช่น ระบบพอร์ทัลลิงก์สำคัญ คณะวิทยาศาสตร์และเทคโนโลยี"
+                          value={siteTitle}
+                          onChange={(e) => setSiteTitle(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-colors"
                         />
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500">หรืออัปโหลดไฟล์รูปภาพ:</span>
-                          <label className="cursor-pointer text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2 py-1 rounded">
-                            เลือกไฟล์
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          โลโก้เว็บไซต์ (Favicon & Tab Icon)
+                        </label>
+                        <div className="flex gap-4 items-center">
+                          {siteLogoUrl ? (
+                            <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-[#252125] border border-slate-200 dark:border-white/10 overflow-hidden shrink-0 flex items-center justify-center p-1.5 shadow-2xs">
+                              <img src={siteLogoUrl} alt="Logo" className="w-full h-full object-contain" />
+                            </div>
+                          ) : (
+                            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-[#252125] border border-dashed border-slate-300 dark:border-white/20 shrink-0 flex items-center justify-center text-slate-400">
+                              <Grid className="w-5 h-5 opacity-40" />
+                            </div>
+                          )}
+                          <div className="flex-1 space-y-2">
                             <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleLogoFile}
-                              className="hidden"
+                              type="text"
+                              placeholder="วาง URL ของรูปภาพโลโก้ที่นี่"
+                              value={siteLogoUrl}
+                              onChange={(e) => setSiteLogoUrl(e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-colors"
                             />
-                          </label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-500 dark:text-slate-400">หรืออัปโหลดไฟล์รูปภาพ:</span>
+                              <label className="cursor-pointer text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 px-3 py-1 rounded-lg transition-colors">
+                                เลือกไฟล์รูปภาพ
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleLogoFile}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+                        >
+                          {isSubmitting ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Save className="w-4 h-4" />
+                          )}
+                          <span>บันทึกข้อมูลเว็บไซต์</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Change Admin Password */}
+                  <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                      <div className="w-2.5 h-6 bg-amber-500 rounded-full"></div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                          เปลี่ยนรหัสผ่านของคุณ ({currentUser?.username})
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          กำหนดรหัสผ่านใหม่สำหรับเข้าสู่ระบบของบัญชีที่กำลังใช้งานอยู่
+                        </p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleChangeMyPassword} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          รหัสผ่านใหม่ (New Password)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="password"
+                            placeholder="กรอกรหัสผ่านใหม่..."
+                            value={myNewPassword}
+                            onChange={(e) => setMyNewPassword(e.target.value)}
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm font-mono transition-colors"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isSubmitting || !myNewPassword.trim()}
+                            className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-amber-600/20 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                          >
+                            {isSubmitting ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            <span>บันทึกรหัสใหม่</span>
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Right Column (xl:col-span-6) */}
+                <div className="xl:col-span-6 space-y-6">
+                  {/* Announcement Config */}
+                  <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                      <div className="w-2.5 h-6 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                          ประกาศแจ้งเตือนด่วน (Announcement Banner)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          จัดการข้อความแจ้งเตือนที่แถบด้านบนสุดของเว็บไซต์
+                        </p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleAnnouncementSubmit} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          สถานะการแสดงผล
+                        </label>
+                        <label className={`flex items-center gap-3 cursor-pointer p-3.5 border rounded-2xl transition-all ${
+                          isAnnouncementActive 
+                            ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800' 
+                            : 'border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={isAnnouncementActive}
+                            onChange={(e) => setIsAnnouncementActive(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 rounded-md border-slate-300 dark:border-white/20 focus:ring-blue-500"
+                          />
+                          <span className="text-sm font-bold text-slate-800 dark:text-white">
+                            เปิดใช้งานแถบประกาศแจ้งเตือนบนหน้าเว็บ
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                          ข้อความประกาศแจ้งเตือน
+                        </label>
+                        <textarea
+                          rows={3}
+                          placeholder="เช่น ประกาศ: กำหนดการลงทะเบียนเรียนภาคการศึกษาถัดไป เริ่มวันที่ 1-5 ..."
+                          value={announcementText}
+                          onChange={(e) => setAnnouncementText(e.target.value)}
+                          disabled={!isAnnouncementActive}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm disabled:opacity-40 disabled:bg-slate-100 dark:disabled:bg-white/5 transition-colors"
+                        />
+                      </div>
+
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-blue-600/20 disabled:opacity-50 cursor-pointer"
+                        >
+                          {isSubmitting ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Save className="w-4 h-4" />
+                          )}
+                          <span>บันทึกการตั้งค่าประกาศ</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Data Backup & Transfer Config (For Vercel / Cross-Domain Migration) */}
+                  <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                      <div className="w-2.5 h-6 bg-emerald-500 rounded-full"></div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                          สำรองและย้ายข้อมูลเว็บไซต์ (Backup & Transfer)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          ส่งออกข้อมูลทุกลิงก์ โลโก้ และประกาศ เพื่อนำไปใช้บน Vercel หรือย้ายเครื่อง
+                        </p>
+                      </div>
+                    </div>
+
+                    {backupStatus && (
+                      <div className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 ${
+                        backupStatus.type === 'success' 
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40' 
+                          : 'bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40'
+                      }`}>
+                        {backupStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />}
+                        <span>{backupStatus.message}</span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Export Box */}
+                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#252125] border border-slate-200/80 dark:border-white/10 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <h5 className="text-xs font-bold text-slate-800 dark:text-white">1. ส่งออกข้อมูล (Export)</h5>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          ดาวน์โหลดลิงก์ทั้งหมด ({links.length} ลิงก์) และการตั้งค่าเป็นไฟล์ JSON
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleExportBackup}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>ดาวน์โหลด JSON</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCopyBackupJSON}
+                            className="px-3 py-2 bg-white dark:bg-[#1a171a] hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            {isCopiedBackup ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                            <span>{isCopiedBackup ? "คัดลอกแล้ว" : "คัดลอก JSON"}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Import Box */}
+                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#252125] border border-slate-200/80 dark:border-white/10 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Upload className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                          <h5 className="text-xs font-bold text-slate-800 dark:text-white">2. นำเข้าข้อมูล (Import)</h5>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          นำเข้าไฟล์ JSON ที่สำรองไว้เพื่อเรียกคืนข้อมูลทั้งหมดทันที
+                        </p>
+                        <div className="pt-1">
+                          <input
+                            type="file"
+                            ref={backupFileInputRef}
+                            accept=".json,application/json"
+                            onChange={handleImportBackup}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => backupFileInputRef.current?.click()}
+                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>เลือกไฟล์ JSON นำเข้า</span>
+                          </button>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-sm shadow-indigo-600/10 disabled:opacity-50 cursor-pointer"
-                  >
-                    {isSubmitting ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    <span>บันทึกข้อมูลเว็บไซต์</span>
-                  </button>
-                </form>
-              </div>
-
-              {/* Announcement Config */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-6">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="p-2.5 bg-blue-500 text-white rounded-2xl">
-                    <Bell className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800">ประกาศแจ้งเตือนด่วน (Announcement Banner)</h3>
-                    <p className="text-xs text-slate-500">จัดการข้อความแจ้งเตือนที่แถบด้านบนสุดของเว็บไซต์</p>
-                  </div>
                 </div>
 
-                <form onSubmit={handleAnnouncementSubmit} className="space-y-4 max-w-xl">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 block">สถานะการแสดงผล</label>
-                    <label className="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={isAnnouncementActive}
-                        onChange={(e) => setIsAnnouncementActive(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm font-medium text-slate-700">เปิดใช้งานแถบประกาศแจ้งเตือน</span>
-                    </label>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 block">ข้อความประกาศแจ้งเตือน</label>
-                    <textarea
-                      rows={3}
-                      placeholder="เช่น ประกาศ: กำหนดการลงทะเบียนเรียนภาคการศึกษาที่ 2/2567 เริ่มวันที่ 1-5 พฤศจิกายน"
-                      value={announcementText}
-                      onChange={(e) => setAnnouncementText(e.target.value)}
-                      disabled={!isAnnouncementActive}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm disabled:opacity-50 disabled:bg-slate-50"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-sm shadow-blue-600/10 disabled:opacity-50 cursor-pointer"
-                  >
-                    {isSubmitting ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    <span>บันทึกการตั้งค่าประกาศ</span>
-                  </button>
-                </form>
-              </div>
-
-              {/* Change Admin Password */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-6">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="p-2.5 bg-amber-500 text-white rounded-2xl">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800">เปลี่ยนรหัสผ่านบัญชีของคุณ ({currentUser?.username})</h3>
-                    <p className="text-xs text-slate-500">กำหนดรหัสผ่านใหม่สำหรับเข้าสู่ระบบของบัญชีที่กำลังใช้งานอยู่</p>
-                  </div>
-                </div>
-
-                <form onSubmit={handleChangeMyPassword} className="max-w-xl space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600 block">รหัสผ่านใหม่ (New Password)</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="password"
-                        placeholder="กรอกรหัสผ่านใหม่..."
-                        value={myNewPassword}
-                        onChange={(e) => setMyNewPassword(e.target.value)}
-                        className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm font-mono"
-                      />
-                      <button
-                        type="submit"
-                        disabled={isSubmitting || !myNewPassword.trim()}
-                        className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-sm shadow-amber-600/10 disabled:opacity-50 cursor-pointer whitespace-nowrap"
-                      >
-                        {isSubmitting ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                        <span>บันทึกรหัสผ่านใหม่</span>
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-
-              {/* Staff Password Config */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-6">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="p-2.5 bg-rose-500 text-white rounded-2xl">
-                    <Key className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800">จัดการรหัสผ่านหมวดหมู่บุคลากร (Staff Passwords)</h3>
-                    <p className="text-xs text-slate-500">ออกรหัสให้บุคลากรได้หลายชุด บุคลากรต้องใส่รหัสก่อนจึงจะกดปุ่ม "บุคลากร" ดูลิงก์สำหรับบุคลากรได้ ลบรหัสเมื่อต้องการยกเลิกสิทธิ์</p>
-                  </div>
-                </div>
-
-                <div className="max-w-xl space-y-4">
-                  {staffPasswords.length > 0 ? (
-                    <div className="space-y-2">
-                      <label className="text-xs font-semibold text-slate-600 block">รหัสที่สร้างจากเครื่องนี้ ({staffPasswords.length}) · ใช้งานได้ทั้งหมดในระบบ {(adminConfig.staffCodeHashes || []).length} รหัส</label>
-                      <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
-                        {staffPasswords.map((pwd, idx) => (
-                          <div key={idx} className={`flex items-center justify-between px-4 py-3 ${idx !== staffPasswords.length - 1 ? 'border-b border-slate-100' : ''}`}>
-                            <div className="font-mono text-sm tracking-wide text-slate-700">{pwd}</div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveStaffPassword(pwd)}
-                              disabled={isSubmitting}
-                              className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-                              title="ลบรหัสผ่าน"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
-                      ยังไม่มีรหัสที่สร้างจากเครื่องนี้ (รหัสที่ใช้งานได้ทั้งหมดในระบบ: {(adminConfig.staffCodeHashes || []).length} รหัส)
-                    </div>
-                  )}
-
-                  <form onSubmit={handleAddStaffPassword} className="pt-2">
-                    <label className="text-xs font-semibold text-slate-600 block mb-1.5">เพิ่มรหัสผ่านใหม่</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="พิมพ์รหัสผ่านที่ต้องการ..."
-                        value={newStaffPassword}
-                        onChange={(e) => setNewStaffPassword(e.target.value)}
-                        className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm font-mono"
-                      />
-                      <button
-                        type="submit"
-                        disabled={isSubmitting || !newStaffPassword.trim()}
-                        className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-sm shadow-rose-600/10 disabled:opacity-50 cursor-pointer whitespace-nowrap"
-                      >
-                        {isSubmitting ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Plus className="w-4 h-4" />
-                        )}
-                        <span>เพิ่มรหัสผ่าน</span>
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-
-              {/* Data Backup & Transfer Config (For Vercel / Cross-Domain Migration) */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2.5 bg-emerald-600 text-white rounded-2xl">
-                    <FileJson className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800">สำรองและย้ายข้อมูลเว็บไซต์ (Backup & Transfer for Vercel)</h3>
-                    <p className="text-xs text-slate-500">
-                      ส่งออกข้อมูลทุกลิงก์, โลโก้, ประกาศ และการตั้งค่า เพื่อนำไปซิงค์บน Vercel หรือย้ายอุปกรณ์ได้ในคลิกเดียว
-                    </p>
-                  </div>
-                </div>
-
-                {backupStatus && (
-                  <div className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                    backupStatus.type === 'success' 
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                      : 'bg-rose-50 text-rose-800 border border-rose-200'
-                  }`}>
-                    {backupStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />}
-                    <span>{backupStatus.message}</span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                  {/* Export Box */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Download className="w-4 h-4 text-emerald-600" />
-                      <h4 className="text-xs font-bold text-slate-700">1. ส่งออกข้อมูลจาก AI Studio (Export)</h4>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                      ดาวน์โหลดข้อมูลลิงก์ทั้งหมด ({links.length} ลิงก์), รูปโลโก้ และการตั้งค่าเว็บไซต์เป็นไฟล์ JSON
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleExportBackup}
-                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>ดาวน์โหลดไฟล์ JSON</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCopyBackupJSON}
-                        className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        {isCopiedBackup ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                        <span>{isCopiedBackup ? "คัดลอกแล้ว" : "คัดลอก JSON"}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Import Box */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Upload className="w-4 h-4 text-indigo-600" />
-                      <h4 className="text-xs font-bold text-slate-700">2. นำเข้าข้อมูลบน Vercel (Import)</h4>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                      เปิดหน้าเว็บนี้บน Vercel แล้วกดเลือกไฟล์ JSON ที่สำรองไว้ เพื่อนำข้อมูลทั้งหมดมาแสดงทันที
-                    </p>
-                    <div className="pt-1">
-                      <input
-                        type="file"
-                        ref={backupFileInputRef}
-                        accept=".json,application/json"
-                        onChange={handleImportBackup}
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => backupFileInputRef.current?.click()}
-                        className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>เลือกไฟล์ JSON เพื่อนำเข้า</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           )}
@@ -3107,131 +3328,203 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {/* TAB 4: ADMIN ACCOUNTS (SUPERADMIN ONLY) */}
           {activeTab === "admins" && (
             <div className="space-y-6">
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs space-y-6">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="p-2.5 bg-amber-600 text-white rounded-2xl">
-                    <Users className="w-5 h-5" />
+              {/* Header Overview Banner */}
+              <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-slate-900 text-white p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 text-amber-300">
+                    <Users className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800">จัดการบัญชีผู้ดูแลระบบ (Admin Accounts)</h3>
-                    <p className="text-xs text-slate-500">จัดการสิทธิ์ผู้ใช้งาน (เฉพาะ Superadmin เท่านั้นที่เข้าถึงส่วนนี้ได้)</p>
+                    <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                      <span>จัดการบัญชีผู้ดูแลระบบ (Admin Accounts)</span>
+                      <span className="text-xs bg-amber-500/30 text-amber-200 border border-amber-400/30 px-2.5 py-0.5 rounded-full font-normal">
+                        Access Control
+                      </span>
+                    </h3>
+                    <p className="text-xs text-amber-100/80 mt-0.5">
+                      กำหนดชื่อผู้ใช้ รหัสผ่าน และบทบาทผู้ดูแลระบบ (สำหรับ Superadmin)
+                    </p>
                   </div>
                 </div>
 
-                {currentUser?.role !== "superadmin" ? (
-                   <div className="p-8 text-center text-rose-500 bg-rose-50 rounded-2xl border border-rose-100 font-semibold flex flex-col items-center justify-center gap-2">
-                      <ShieldAlert className="w-8 h-8" />
-                      <span>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (ต้องการสิทธิ์ Superadmin)</span>
-                   </div>
-                ) : (
-                  <div className="space-y-4">
-                     <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-slate-700 text-sm">รายชื่อแอดมินในระบบ</h4>
-                     </div>
-                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center text-sm text-slate-500 mb-6">
-                        บัญชี Superadmin สามารถจัดการแอดมินคนอื่นๆ ได้ เพื่อมอบสิทธิ์ในการจัดการลิงก์
-                     </div>
-                     
-                     <form onSubmit={handleAddAdmin} className="space-y-4 bg-amber-50/30 p-5 rounded-2xl border border-amber-100">
-                        <h4 className="font-semibold text-slate-700 text-sm">เพิ่มบัญชีผู้ดูแลระบบ (Add Admin)</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div className="space-y-1.5">
-                              <label className="text-xs font-semibold text-slate-600 block">ชื่อผู้ใช้งาน (Username) <span className="text-rose-500">*</span></label>
-                              <input
-                                 type="text"
-                                 required
-                                 value={newAdminUsername}
-                                 onChange={(e) => setNewAdminUsername(e.target.value)}
-                                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm"
-                                 placeholder="เช่น admin_fahsai"
-                              />
-                           </div>
-                           <div className="space-y-1.5">
-                              <label className="text-xs font-semibold text-slate-600 block">รหัสผ่าน (Password) <span className="text-rose-500">*</span></label>
-                              <input
-                                 type="password"
-                                 required
-                                 value={newAdminPassword}
-                                 onChange={(e) => setNewAdminPassword(e.target.value)}
-                                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm font-mono"
-                                 placeholder="รหัสผ่านเข้าใช้งาน"
-                              />
-                           </div>
-                           <div className="space-y-1.5 md:col-span-2">
-                              <label className="text-xs font-semibold text-slate-600 block">บทบาท (Role) <span className="text-rose-500">*</span></label>
-                              <select 
-                                 value={newAdminRole}
-                                 onChange={(e) => setNewAdminRole(e.target.value as "admin" | "superadmin" | "staff")}
-                                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm bg-white"
-                              >
-                                 <option value="admin">Admin (ผู้ดูแลระบบ: ปักหมุดของตัวเอง, จัดการลิงก์ได้บางส่วน)</option>
-                                 <option value="staff">บุคลากร (ล็อกอินที่ปุ่ม &quot;บุคลากร&quot; เพื่อดูลิงก์บุคลากร เข้าหลังบ้านไม่ได้)</option>
-                                 <option value="superadmin">Superadmin (ผู้ดูแลระบบสูงสุด: จัดการได้ทุกอย่าง)</option>
-                              </select>
-                           </div>
-                        </div>
-                        <div className="pt-2">
-                           <button
-                              type="submit"
-                              disabled={isSubmitting}
-                              className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                           >
-                              {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                              บันทึกบัญชีผู้ดูแลระบบ
-                           </button>
-                        </div>
-                     </form>
-
-                     <div className="space-y-2 mt-6">
-                        <h4 className="font-semibold text-slate-700 text-sm">รายชื่อแอดมินจำลอง (เนื่องจากข้อจำกัดเรื่อง CORS)</h4>
-                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-                           {adminUsers.length > 0 ? adminUsers.map((admin, idx) => (
-                              <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
-                                 <div>
-                                    <div className="font-semibold text-slate-800 flex items-center gap-2">
-                                       {admin.username}
-                                       {admin.role === "superadmin" && (
-                                          <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-sm uppercase tracking-wider">Superadmin</span>
-                                       )}
-                                       {admin.role === "staff" && (
-                                          <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-sm tracking-wider">บุคลากร</span>
-                                       )}
-                                    </div>
-                                    <div className="text-xs text-slate-500 mt-0.5">
-                                      รหัสผ่าน: <span className="font-mono bg-slate-100 px-1 py-0.5 rounded-sm">{(admin as any).password || "••••••••"}</span> 
-                                      <span className="ml-1 opacity-70">(แอดมินหลักสามารถดูได้)</span>
-                                    </div>
-                                 </div>
-                                 {admin.username !== currentUser.username && (
-                                    <button 
-                                       onClick={() => handleDeleteAdmin(admin.username)}
-                                       className="p-2 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors cursor-pointer self-start sm:self-center shrink-0"
-                                       title="ลบบัญชีนี้"
-                                    >
-                                       <Trash2 className="w-4 h-4" />
-                                    </button>
-                                 )}
-                              </div>
-                           )) : (
-                              <div className="p-8 text-center text-slate-400 text-sm">
-                                 ยังไม่มีข้อมูลแอดมินจำลอง เพิ่มแอดมินใหม่ที่ฟอร์มด้านบน
-                              </div>
-                           )}
-                        </div>
-                     </div>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 self-start sm:self-auto text-xs text-amber-100">
+                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                  <span>แอดมินทั้งหมด:</span>
+                  <span className="font-bold text-white font-mono">{adminUsers.length} บัญชี</span>
+                </div>
               </div>
+
+              {currentUser?.role !== "superadmin" ? (
+                <div className="p-12 text-center text-rose-500 bg-rose-50 dark:bg-rose-950/40 rounded-3xl border border-rose-200 dark:border-rose-800/40 font-semibold flex flex-col items-center justify-center gap-3">
+                  <ShieldAlert className="w-10 h-10 text-rose-600 dark:text-rose-400" />
+                  <span className="text-base font-bold">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</span>
+                  <span className="text-xs text-rose-600/80 dark:text-rose-400/80">
+                    ต้องใช้บัญชีสิทธิ์ Superadmin เท่านั้นในการจัดการบัญชีผู้ดูแลคนอื่น
+                  </span>
+                </div>
+              ) : (
+                /* Bento 2-Column Grid */
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+                  {/* Left Column: Add Admin Form */}
+                  <div className="xl:col-span-5 space-y-6">
+                    <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-5">
+                      <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                        <div className="w-2.5 h-6 bg-amber-500 rounded-full"></div>
+                        <div>
+                          <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                            เพิ่มบัญชีแอดมินใหม่ (Add Admin)
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            กำหนด Username, Password และระดับสิทธิ์
+                          </p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleAddAdmin} className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                            ชื่อผู้ใช้งาน (Username) <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={newAdminUsername}
+                            onChange={(e) => setNewAdminUsername(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm transition-colors"
+                            placeholder="เช่น admin_fahsai"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                            รหัสผ่าน (Password) <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="password"
+                            required
+                            value={newAdminPassword}
+                            onChange={(e) => setNewAdminPassword(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-sm font-mono transition-colors"
+                            placeholder="รหัสผ่านเข้าใช้งาน"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                            บทบาทและสิทธิ์ (Role) <span className="text-rose-500">*</span>
+                          </label>
+                          <select 
+                            value={newAdminRole}
+                            onChange={(e) => setNewAdminRole(e.target.value as "admin" | "superadmin" | "staff")}
+                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] text-slate-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-xs transition-colors"
+                          >
+                            <option value="admin">Admin (ผู้ดูแลระบบ: ปักหมุดส่วนตัว, จัดการลิงก์)</option>
+                            <option value="staff">บุคลากร (ล็อกอินปุ่ม &quot;บุคลากร&quot; ดูลิงก์เฉพาะบุคลากร)</option>
+                            <option value="superadmin">Superadmin (ผู้ดูแลระบบสูงสุด: จัดการได้ทุกอย่าง)</option>
+                          </select>
+                        </div>
+
+                        <div className="pt-2">
+                          <button
+                            type="submit"
+                            disabled={isSubmitting || !newAdminUsername.trim() || !newAdminPassword.trim()}
+                            className="w-full min-h-[46px] px-5 py-2.5 bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm shadow-amber-600/20 cursor-pointer disabled:opacity-50"
+                          >
+                            {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            <span>บันทึกบัญชีผู้ดูแลระบบ</span>
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Admin List */}
+                  <div className="xl:col-span-7 space-y-6">
+                    <div className="bg-white dark:bg-[#1e1b1e] p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
+                      <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-white/10">
+                        <div className="w-2.5 h-6 bg-slate-700 dark:bg-slate-300 rounded-full"></div>
+                        <div>
+                          <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                            รายชื่อแอดมินในระบบ ({adminUsers.length} บัญชี)
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            บัญชีที่มีสิทธิ์เข้าจัดการหลังบ้าน
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        {adminUsers.length > 0 ? (
+                          adminUsers.map((admin, idx) => (
+                            <div 
+                              key={idx} 
+                              className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-[#252125] flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-amber-300 dark:hover:border-amber-600/40 transition-colors"
+                            >
+                              <div className="space-y-1">
+                                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                  <span>{admin.username}</span>
+                                  {admin.role === "superadmin" && (
+                                    <span className="text-[10px] font-bold bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full uppercase tracking-wider border border-rose-200 dark:border-rose-800/40">
+                                      Superadmin
+                                    </span>
+                                  )}
+                                  {admin.role === "admin" && (
+                                    <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full tracking-wider border border-amber-200 dark:border-amber-800/40">
+                                      Admin
+                                    </span>
+                                  )}
+                                  {admin.role === "staff" && (
+                                    <span className="text-[10px] font-bold bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full tracking-wider">
+                                      บุคลากร
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                  <span>รหัสผ่าน:</span>
+                                  <span className="font-mono bg-white dark:bg-[#1a171a] px-2 py-0.5 rounded-md border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white font-semibold">
+                                    {(admin as any).password || "••••••••"}
+                                  </span> 
+                                  <span className="text-[11px] opacity-70">(แอดมินหลักสามารถดูได้)</span>
+                                </div>
+                              </div>
+
+                              {admin.username !== currentUser.username && (
+                                <button 
+                                  onClick={() => handleDeleteAdmin(admin.username)}
+                                  className="w-8 h-8 flex items-center justify-center text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-300 rounded-xl transition-colors cursor-pointer self-start sm:self-center shrink-0 border border-transparent hover:border-rose-100 dark:hover:border-rose-900/40"
+                                  title="ลบบัญชีนี้"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-8 text-center text-slate-400 text-sm">
+                            ยังไม่มีข้อมูลแอดมินในระบบ
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
             </div>
           )}
 
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+        <div className="px-8 py-4 border-t border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#181618] flex items-center justify-between shrink-0">
+          <div className="text-xs text-slate-400 dark:text-slate-500 font-medium hidden sm:flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Bento Studio Admin Workspace · FST Link Hub</span>
+          </div>
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-semibold rounded-xl transition-all cursor-pointer"
+            className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-2xl transition-all cursor-pointer"
           >
             ปิดหน้าต่าง
           </button>
