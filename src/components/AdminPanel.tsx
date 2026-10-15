@@ -873,14 +873,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       }
     } catch (e) {}
 
-    const defaultAdmin = {
-      username: "admin",
-      password: adminConfig.adminPassword || "admin1234",
-      role: "superadmin" as const,
-      pinnedLinks: []
-    };
-    setAdminUsers([defaultAdmin]);
-    localStorage.setItem("scitech_admin_users", JSON.stringify([defaultAdmin]));
+    // Only create default admin on fresh install if never initialized before
+    if (!localStorage.getItem("scitech_admin_users_initialized")) {
+      const defaultAdmin = {
+        username: "admin",
+        password: adminConfig.adminPassword || "admin1234",
+        role: "superadmin" as const,
+        pinnedLinks: []
+      };
+      setAdminUsers([defaultAdmin]);
+      localStorage.setItem("scitech_admin_users", JSON.stringify([defaultAdmin]));
+      localStorage.setItem("scitech_admin_users_initialized", "true");
+    }
   }, [adminConfig.adminPassword]);
 
   const handleAddAdmin = async (e: React.FormEvent) => {
@@ -905,6 +909,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       ];
       setAdminUsers(updated);
       localStorage.setItem("scitech_admin_users", JSON.stringify(updated));
+      localStorage.setItem("scitech_admin_users_initialized", "true");
 
       if (newAdminUsername === "admin") {
         await onUpdateConfig({ ...adminConfig, adminPassword: newAdminPassword });
@@ -921,21 +926,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const handleDeleteAdmin = async (username: string) => {
-    if (!window.confirm(`ยืนยันการลบแอดมิน: ${username}?`)) return;
+    if (adminUsers.length <= 1) {
+      showAlert("ไม่สามารถลบได้ ต้องมีบัญชีแอดมินเหลืออย่างน้อย 1 บัญชี เพื่อป้องกันระบบถูกล็อก", "error");
+      return;
+    }
+
+    const isCurrent = currentUser?.username && username.toLowerCase() === currentUser.username.toLowerCase();
+    const confirmMsg = isCurrent
+      ? `ยืนยันการลบบัญชี ${username}? เนื่องจากเป็นบัญชีที่กำลังใช้งานอยู่ ระบบจะออกจากระบบเพื่อให้คุณเข้าสู่ระบบด้วยบัญชีแอดมินอื่น`
+      : `ยืนยันการลบแอดมิน: ${username}?`;
+
+    if (!window.confirm(confirmMsg)) return;
     
     setIsSubmitting(true);
     try {
-       if (adminConfig.googleAppsScriptUrl && authCreds) {
-         await deleteAdminViaWebApp(adminConfig.googleAppsScriptUrl, username, authCreds);
-       }
-       const updated = adminUsers.filter(a => a.username !== username);
-       setAdminUsers(updated);
-       localStorage.setItem("scitech_admin_users", JSON.stringify(updated));
-       showAlert(`ลบแอดมิน ${username} สำเร็จ`);
+      if (adminConfig.googleAppsScriptUrl && authCreds) {
+        await deleteAdminViaWebApp(adminConfig.googleAppsScriptUrl, username, authCreds);
+      }
+      const updated = adminUsers.filter(a => a.username.toLowerCase() !== username.toLowerCase());
+      setAdminUsers(updated);
+      localStorage.setItem("scitech_admin_users", JSON.stringify(updated));
+      localStorage.setItem("scitech_admin_users_initialized", "true");
+      showAlert(`ลบแอดมิน ${username} สำเร็จ`);
+
+      if (isCurrent) {
+        sessionStorage.removeItem("scitech_auth_creds");
+        sessionStorage.removeItem("scitech_user");
+        window.location.reload();
+      }
     } catch (err) {
-       showAlert("เกิดข้อผิดพลาดในการลบแอดมิน", "error");
+      showAlert("เกิดข้อผิดพลาดในการลบแอดมิน", "error");
     } finally {
-       setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -3517,14 +3539,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 </div>
                               </div>
 
-                              {admin.username !== currentUser.username && (
+                              {adminUsers.length > 1 ? (
                                 <button 
                                   onClick={() => handleDeleteAdmin(admin.username)}
                                   className="w-8 h-8 flex items-center justify-center text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-300 rounded-xl transition-colors cursor-pointer self-start sm:self-center shrink-0 border border-transparent hover:border-rose-100 dark:hover:border-rose-900/40"
-                                  title="ลบบัญชีนี้"
+                                  title={`ลบบัญชี ${admin.username}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
+                              ) : (
+                                <span 
+                                  className="text-[11px] text-slate-400 dark:text-slate-500 italic px-2.5 py-1 bg-slate-100 dark:bg-white/5 rounded-lg shrink-0 self-start sm:self-center"
+                                  title="สร้างแอดมินใหม่ทางซ้ายก่อน จึงจะสามารถลบบัญชีนี้ได้"
+                                >
+                                  บัญชีเดียวในระบบ
+                                </span>
                               )}
                             </div>
                           ))

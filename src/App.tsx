@@ -428,14 +428,15 @@ export default function App() {
       if (stored) localAdmins = JSON.parse(stored);
     } catch (err) {}
 
-    // Default superadmin if not present in list
-    const defaultPassword = adminConfig.adminPassword || "admin1234";
-    if (!localAdmins.some(u => u.username.toLowerCase() === "admin")) {
-      localAdmins.unshift({ username: "admin", password: defaultPassword, role: "superadmin", pinnedLinks: [] });
+    // Only inject default superadmin on fresh install if NO admin accounts exist at all
+    if (localAdmins.length === 0 && !localStorage.getItem("scitech_admin_users_initialized")) {
+      const defaultPassword = adminConfig.adminPassword || "admin1234";
+      localAdmins.push({ username: "admin", password: defaultPassword, role: "superadmin", pinnedLinks: [] });
+      localStorage.setItem("scitech_admin_users", JSON.stringify(localAdmins));
     }
 
     const matchedLocalUser = localAdmins.find(
-      u => u.username.toLowerCase() === trimmedUser.toLowerCase() && (u.password === password || (u.username.toLowerCase() === "admin" && password === defaultPassword))
+      u => u.username.toLowerCase() === trimmedUser.toLowerCase() && u.password === password
     );
     if (matchedLocalUser) {
       return { username: matchedLocalUser.username, role: matchedLocalUser.role, pinnedLinks: matchedLocalUser.pinnedLinks || [] };
@@ -479,7 +480,7 @@ export default function App() {
     try {
       const user = await verifyAccount(loginUsername, loginPassword);
       if (!user) {
-        setLoginError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (หากเป็นครั้งแรกใช้ admin / admin1234)");
+        setLoginError(lang === "en" ? "Invalid username or password" : "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
         return;
       }
       if (user.role === "staff") {
@@ -1510,22 +1511,6 @@ export default function App() {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {lang === "en" ? "Sign in to manage the link portal" : "กรุณาเข้าสู่ระบบเพื่อจัดการพอร์ทัลลิงก์"}
               </p>
-            </div>
-
-            {/* Info notice about default password */}
-            <div className="p-3 bg-white/60 dark:bg-white/5 rounded-xl border border-white dark:border-white/10 shadow-sm text-[11px] text-slate-600 dark:text-slate-300 flex gap-2">
-              <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#5c0620] dark:text-rose-400" />
-              <div>
-                {lang === "en" ? (
-                  <>
-                    <strong>Initial Setup:</strong> Super Admin username is <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin</code> and default password is <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin1234</code>
-                  </>
-                ) : (
-                  <>
-                    <strong>สำหรับเริ่มต้นใช้งาน:</strong> ผู้ดูแลระบบหลัก (Super Admin) ใช้ชื่อผู้ใช้ <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin</code> และรหัสผ่าน <code className="font-mono bg-white dark:bg-black/40 px-1 py-0.5 rounded-xs border border-slate-100 dark:border-white/10 font-bold text-slate-800 dark:text-white shadow-sm">admin1234</code>
-                  </>
-                )}
-              </div>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4">
