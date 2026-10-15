@@ -1301,7 +1301,7 @@ export default function App() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 grid-flow-dense">
 
           {/* Hero: greeting + search */}
-          <div className="col-span-2 bg-[#5c0620] dark:bg-[#480518] text-white rounded-[24px] md:rounded-[28px] p-5 md:p-8 flex flex-col justify-between gap-5 md:gap-7 min-h-[200px] md:min-h-[260px] shadow-sm">
+          <div className="col-span-2 bg-[#5c0620] dark:bg-[#480518] text-white rounded-[24px] md:rounded-[28px] p-5 md:p-8 flex flex-col justify-between gap-5 md:gap-7 min-h-[200px] md:min-h-[260px] shadow-sm selection:bg-white selection:text-[#5c0620] dark:selection:bg-white dark:selection:text-[#480518]">
             <div>
               <div className="text-[13px] md:text-[14px] text-[#f6d9e0] dark:text-rose-200/80">
                 {lang === "en" ? "Faculty of Science and Technology" : "คณะวิทยาศาสตร์และเทคโนโลยี"}
@@ -1319,7 +1319,7 @@ export default function App() {
                 placeholder={lang === "en" ? "Search systems..." : "พิมพ์ชื่อระบบ..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-12 min-h-[52px] md:min-h-14 bg-white dark:bg-[#1a1418] text-[#1f1a1c] dark:text-white placeholder-[#7a7074] dark:placeholder-slate-400 border border-transparent dark:border-white/10 rounded-2xl text-[16px] focus:outline-none focus:ring-4 focus:ring-white/40"
+                className="w-full pl-12 pr-12 min-h-[52px] md:min-h-14 bg-white dark:bg-[#1a1418] text-[#1f1a1c] dark:text-white placeholder-[#7a7074] dark:placeholder-slate-400 border border-transparent dark:border-white/10 rounded-2xl text-[16px] focus:outline-none focus:ring-4 focus:ring-white/40 selection:bg-[#5c0620]/20 selection:text-[#5c0620] dark:selection:bg-rose-500/30 dark:selection:text-white"
               />
               {searchQuery && (
                 <button type="button" onClick={() => setSearchQuery("")} aria-label={lang === "en" ? "Clear search" : "ล้างคำค้นหา"} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[#5e5558] dark:text-slate-400 hover:text-[#1f1a1c] dark:hover:text-white cursor-pointer">
