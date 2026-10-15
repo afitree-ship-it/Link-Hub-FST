@@ -177,6 +177,10 @@ export default function App() {
   const [isStaffChecking, setIsStaffChecking] = useState(false);
   const [staffLoginError, setStaffLoginError] = useState("");
 
+  // Parallax background refs for mouse wheel & finger touch scrolling
+  const bgParallaxRef = React.useRef<HTMLDivElement>(null);
+  const mistParallaxRef = React.useRef<HTMLDivElement>(null);
+
   // Restore session
   useEffect(() => {
     try {
@@ -192,17 +196,37 @@ export default function App() {
     }
   }, []);
 
-  // Smooth scroll to top listener
+  // Smooth scroll & multiplane parallax listener (mouse wheel, scrollbar & finger touch scroll)
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 300) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
+    let ticking = false;
+    let lastScrollY = 0;
+
+    const onScroll = () => {
+      lastScrollY = window.scrollY || window.pageYOffset || 0;
+
+      setShowScrollTop(lastScrollY > 300);
+
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const sy = lastScrollY;
+          // Background mountains move with natural depth parallax
+          if (bgParallaxRef.current) {
+            bgParallaxRef.current.style.transform = `translate3d(0, ${-sy * 0.18}px, 0)`;
+          }
+          // Ambient mist drifts slightly faster for rich 3D atmospheric perspective
+          if (mistParallaxRef.current) {
+            mistParallaxRef.current.style.transform = `translate3d(0, ${-sy * 0.28}px, 0)`;
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const scrollToTop = () => {
@@ -1053,27 +1077,37 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f3f0ef] dark:bg-[#121113] text-[#1f1a1c] dark:text-[#f3f0ef] flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] dark:selection:bg-rose-500/30 dark:selection:text-rose-200 relative overflow-x-clip transition-colors duration-200">
 
-      {/* Background layer: Subtle misty lush green mountains & campus building */}
+      {/* Background layer: Subtle misty lush green mountains & campus building with Parallax Scroll */}
       <div 
         aria-hidden="true" 
         className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none"
       >
-        {/* Campus & Green Mountains scenery */}
-        <img
-          src={campusBg}
-          alt=""
-          className="w-full h-full object-cover object-top opacity-22 dark:opacity-10 scale-[1.03] filter contrast-[1.05] saturate-[1.15] dark:saturate-[0.7] dark:brightness-[0.75] transition-all duration-700"
-        />
-
-        {/* Soft atmospheric morning mist overlay layers */}
+        {/* Parallax Mountains & Campus scenery layer */}
         <div 
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.45)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.05)_0%,transparent_70%)] blur-2xl animate-mist-slow"
-        />
-        <div 
-          className="absolute top-0 inset-x-0 h-[480px] bg-gradient-to-b from-white/40 via-white/15 to-transparent dark:from-black/30 dark:via-black/10 dark:to-transparent blur-xl animate-mist-reverse"
-        />
+          ref={bgParallaxRef} 
+          className="absolute -top-[8%] -left-[3%] -right-[3%] h-[135%] will-change-transform"
+        >
+          <img
+            src={campusBg}
+            alt=""
+            className="w-full h-full object-cover object-top opacity-24 dark:opacity-12 scale-[1.02] filter contrast-[1.05] saturate-[1.15] dark:saturate-[0.7] dark:brightness-[0.75] transition-opacity duration-700"
+          />
+        </div>
 
-        {/* Smooth vignette & page background blend for high text readability */}
+        {/* Parallax Morning mist overlay layers */}
+        <div 
+          ref={mistParallaxRef} 
+          className="absolute -top-[10%] -left-[3%] -right-[3%] h-[140%] will-change-transform"
+        >
+          <div 
+            className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.45)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.05)_0%,transparent_70%)] blur-2xl animate-mist-slow"
+          />
+          <div 
+            className="absolute top-0 inset-x-0 h-[520px] bg-gradient-to-b from-white/40 via-white/15 to-transparent dark:from-black/30 dark:via-black/10 dark:to-transparent blur-xl animate-mist-reverse"
+          />
+        </div>
+
+        {/* Fixed smooth vignette & page background blend for high text readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#f3f0ef]/40 via-[#f3f0ef]/20 to-[#f3f0ef] dark:from-[#121113]/60 dark:via-[#121113]/30 dark:to-[#121113]" />
       </div>
 
