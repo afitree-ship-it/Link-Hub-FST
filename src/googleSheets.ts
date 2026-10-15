@@ -132,6 +132,7 @@ export const normalizeLink = (raw: any, existingLink?: Link): Link => {
     description: String(raw.description !== undefined ? raw.description : (raw[3] || '')),
     targetAudience,
     category,
+    order: raw.order !== undefined ? Number(raw.order) : (existingLink?.order !== undefined ? existingLink.order : undefined),
     isStaffOnly: targetAudience === 'staff',
     clickCount: parseInt(raw.clickCount !== undefined ? raw.clickCount : (raw[5] || '0'), 10) || 0,
     createdAt: String(raw.createdAt || raw[6] || new Date().toISOString()),

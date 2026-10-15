@@ -9,6 +9,7 @@ export interface Link {
   isStaffOnly: boolean;
   targetAudience?: TargetAudience;
   category?: LinkCategory;
+  order?: number;
   clickCount: number;
   createdAt: string;
   thumbnailUrl?: string;

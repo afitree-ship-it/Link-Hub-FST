@@ -767,9 +767,13 @@ export default function App() {
             if (fetchedLinks && isMounted) {
               setLinks(prev => {
                 const prevMap = new Map(prev.map(p => [p.id, p]));
-                const normalized = fetchedLinks.map((raw: any) => {
+                const normalized = fetchedLinks.map((raw: any, idx: number) => {
                   const id = String(raw.id || raw[0] || '');
-                  return normalizeLink(raw, prevMap.get(id));
+                  const item = normalizeLink(raw, prevMap.get(id));
+                  if (item.order === undefined) {
+                    item.order = idx + 1;
+                  }
+                  return item;
                 });
                 const isSame = JSON.stringify(prev) === JSON.stringify(normalized);
                 if (!isSame) {
@@ -812,11 +816,12 @@ export default function App() {
 
   // CRUD Links
   const handleAddLink = async (newLinkData: Omit<Link, "id" | "clickCount" | "createdAt">) => {
-    const fullLink = {
+    const fullLink: Link = {
       ...newLinkData,
       id: `link-${Date.now()}`,
       clickCount: 0,
       createdAt: new Date().toISOString(),
+      order: links.length + 1,
     };
     setLinks(prev => {
       const updated = [...prev, fullLink];
@@ -873,6 +878,23 @@ export default function App() {
     if (adminConfig.isGoogleSheetSyncEnabled && adminConfig.googleAppsScriptUrl) {
       import('./googleSheets').then(({ sendActionToWebApp }) => {
         sendActionToWebApp(adminConfig.googleAppsScriptUrl!, 'delete', { id }, authCreds || undefined);
+      });
+    }
+  };
+
+  const handleReorderLinks = async (reorderedLinks: Link[]) => {
+    const updated = reorderedLinks.map((link, idx) => ({
+      ...link,
+      order: idx + 1,
+    }));
+    setLinks(updated);
+    try {
+      localStorage.setItem("scitech_links", JSON.stringify(updated));
+    } catch {}
+
+    if (adminConfig.isGoogleSheetSyncEnabled && adminConfig.googleAppsScriptUrl) {
+      import('./googleSheets').then(({ syncViaWebApp }) => {
+        syncViaWebApp(adminConfig.googleAppsScriptUrl!, updated, authCreds || undefined);
       });
     }
   };
@@ -961,10 +983,29 @@ export default function App() {
       // Pinned items first
       if (aIsPinned && !bIsPinned) return -1;
       if (!aIsPinned && bIsPinned) return 1;
+
+      // Custom order set by admin
+      const aOrder = typeof a.order === 'number' ? a.order : undefined;
+      const bOrder = typeof b.order === 'number' ? b.order : undefined;
+      if (aOrder !== undefined && bOrder !== undefined) {
+        if (aOrder !== bOrder) return aOrder - bOrder;
+      } else if (aOrder !== undefined) {
+        return -1;
+      } else if (bOrder !== undefined) {
+        return 1;
+      }
+
+      // Fallback: position in links array
+      const idxA = links.findIndex(l => l.id === a.id);
+      const idxB = links.findIndex(l => l.id === b.id);
+      if (idxA !== -1 && idxB !== -1 && idxA !== idxB) {
+        return idxA - idxB;
+      }
+
       // Then by creation date (newest first, or keep default order)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [displayLinks, searchQuery, viewMode, selectedCategory, currentUser, isAdmin]);
+  }, [displayLinks, searchQuery, viewMode, selectedCategory, currentUser, isAdmin, links]);
 
   // Personal pins: kept in this browser only, so every visitor has their own list.
   const [myPins, setMyPins] = useState<string[]>(() => {
@@ -999,21 +1040,14 @@ export default function App() {
     [myPins, displayLinks, viewMode]
   );
 
-  // Bento order: faculty pins first, then most clicked. Two feature tiles, one wide tile, the rest small.
+  // Bento order: preserve sequence from filteredLinks, with pinned items highlighted as wide cards
   const bentoItems = useMemo(() => {
-    if (searchQuery) {
-      return filteredLinks.map(link => ({ link, variant: "small" as BentoVariant, rank: undefined as number | undefined }));
-    }
-    // Links the admin pinned get the big highlighted card; every other link uses the same card.
-    const ranked = [...filteredLinks].sort((a, b) =>
-      (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || (b.clickCount || 0) - (a.clickCount || 0)
-    );
-    return ranked.map(link => ({
+    return filteredLinks.map(link => ({
       link,
       variant: (link.isPinned ? "wide" : "small") as BentoVariant,
       rank: undefined as number | undefined,
     }));
-  }, [filteredLinks, searchQuery]);
+  }, [filteredLinks]);
 
   return (
     <div className="min-h-screen bg-[#f3f0ef] dark:bg-[#121113] text-[#1f1a1c] dark:text-[#f3f0ef] flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] dark:selection:bg-rose-500/30 dark:selection:text-rose-200 relative overflow-x-clip transition-colors duration-200">
@@ -1627,6 +1661,7 @@ export default function App() {
             onAddLink={handleAddLink}
             onUpdateLink={handleUpdateLink}
             onDeleteLink={handleDeleteLink}
+            onReorderLinks={handleReorderLinks}
           />
         </React.Suspense>
       )}

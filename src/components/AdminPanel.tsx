@@ -6,7 +6,7 @@ import {
   Upload, FileImage, Pin, BarChart3, Bell, Plus, Users, ShieldAlert,
   Lock, Download, Copy, Check, FileJson, GraduationCap, Briefcase,
   ExternalLink, Eye, EyeOff, UserCheck, Search, TrendingUp, Sparkles, BarChart2,
-  Building2, FlaskConical
+  Building2, FlaskConical, GripVertical, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowUpDown
 } from "lucide-react";
 import { AVAILABLE_ICONS, DynamicIcon } from "./DynamicIcon";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -26,6 +26,7 @@ interface AdminPanelProps {
   onAddLink: (link: Omit<Link, "id" | "clickCount" | "createdAt">) => Promise<void>;
   onUpdateLink: (id: string, updates: Partial<Link>) => Promise<void>;
   onDeleteLink: (id: string) => Promise<void>;
+  onReorderLinks?: (reorderedLinks: Link[]) => Promise<void>;
 }
 
 const GAS_SCRIPT_TEMPLATE = `var SPREADSHEET_ID = "1pphCw3O30znOqQeyAgYsv9P4M6SRVGFVdn_aDbDqwPY";
@@ -552,6 +553,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onAddLink,
   onUpdateLink,
   onDeleteLink,
+  onReorderLinks,
 }) => {
   const [activeTab, setActiveTab] = useState<"dashboard" | "links" | "sheets" | "staff" | "security" | "admins">("dashboard");
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
@@ -559,6 +561,73 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Success / Error messages
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reorder State & Handlers
+  const [orderedLinks, setOrderedLinks] = useState<Link[]>(links);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+
+  useEffect(() => {
+    setOrderedLinks(links);
+  }, [links]);
+
+  const handleMoveLink = async (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= orderedLinks.length || fromIndex === toIndex) return;
+    const reordered = [...orderedLinks];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+
+    const withOrder = reordered.map((item, idx) => ({
+      ...item,
+      order: idx + 1,
+    }));
+
+    setOrderedLinks(withOrder);
+
+    if (onReorderLinks) {
+      setIsSavingOrder(true);
+      try {
+        await onReorderLinks(withOrder);
+        showAlert(`สลับตำแหน่ง: ย้าย "${moved.title}" ไปลำดับที่ ${toIndex + 1} เรียบร้อยแล้ว`);
+      } catch (e) {
+        showAlert("เกิดข้อผิดพลาดในการบันทึกลำดับ", "error");
+      } finally {
+        setIsSavingOrder(false);
+      }
+    }
+  };
+
+  const handleLinkDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleLinkDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleLinkDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleLinkDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    await handleMoveLink(draggedIndex, targetIndex);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   // Link Form State
   const [linkTitle, setLinkTitle] = useState("");
@@ -643,16 +712,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleImageDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
+  const handleImageDragLeave = () => {
     setIsDragging(false);
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleImageDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const files = e.dataTransfer.files;
@@ -1992,9 +2061,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                         {/* Interactive Drop & Paste target */}
                         <div
-                          onDragOver={handleDragOver}
-                          onDragLeave={handleDragLeave}
-                          onDrop={handleDrop}
+                          onDragOver={handleImageDragOver}
+                          onDragLeave={handleImageDragLeave}
+                          onDrop={handleImageDrop}
                           onClick={() => fileInputRef.current?.click()}
                           className={`h-[120px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-2.5 text-center cursor-pointer transition-all ${
                             isDragging
@@ -2090,29 +2159,97 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                  </div>
               )}
 
-              {/* Existing Links List */}
+              {/* Existing Links List with Drag & Drop and Move Buttons */}
               <div className="space-y-3">
-                <h4 className="text-sm font-bold text-slate-700 pl-1 flex items-center gap-2">
-                  <span>รายการลิงก์ในระบบทั้งหมด</span>
-                  <span className="text-xs font-normal text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded-full">{links.length} รายการ</span>
-                </h4>
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-1">
+                  <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 pl-1 flex items-center gap-2">
+                    <ArrowUpDown className="w-4 h-4 text-[#5c0620] dark:text-rose-400" />
+                    <span>รายการลิงก์ในระบบทั้งหมด (จัดเรียงลำดับ)</span>
+                    <span className="text-xs font-normal text-slate-500 bg-slate-200/60 dark:bg-white/10 dark:text-slate-300 px-2 py-0.5 rounded-full">{orderedLinks.length} รายการ</span>
+                  </h4>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="bg-rose-50 dark:bg-rose-950/40 text-[#5c0620] dark:text-rose-300 px-2.5 py-1 rounded-lg border border-rose-100 dark:border-rose-900/40 font-medium flex items-center gap-1.5">
+                      <GripVertical className="w-3.5 h-3.5" />
+                      <span>ลากสลับตำแหน่ง ⠿ หรือกด ⬆️ ⬇️ เพื่อโยกย้ายลำดับ</span>
+                    </span>
+                  </div>
+                </div>
 
                 <div className="bg-white dark:bg-[#1e1b1e] rounded-2xl border border-slate-100 dark:border-white/10 shadow-xs overflow-hidden">
-                  {links.length === 0 ? (
+                  {orderedLinks.length === 0 ? (
                     <div className="p-8 text-center text-slate-400 space-y-2">
                       <Info className="w-8 h-8 mx-auto opacity-40" />
                       <p className="text-sm">ยังไม่มีลิงก์ใดๆ ในระบบ คลิกแบบฟอร์มด้านบนเพื่อเพิ่มลิงก์แรก</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-[400px] overflow-y-auto">
-                      {links.map((link) => {
+                    <div className="divide-y divide-slate-100 dark:divide-white/5 max-h-[460px] overflow-y-auto">
+                      {orderedLinks.map((link, index) => {
                         const aud = link.targetAudience || (link.isStaffOnly ? 'staff' : 'both');
                         const cat = link.category || 'faculty';
+                        const isFirst = index === 0;
+                        const isLast = index === orderedLinks.length - 1;
+                        const isBeingDragged = draggedIndex === index;
+                        const isTargetDrag = dragOverIndex === index;
+
                         return (
-                          <div key={link.id} className="p-4 flex items-start justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                            <div className="min-w-0 flex-1 flex gap-3">
+                          <div 
+                            key={link.id} 
+                            onDragOver={(e) => handleLinkDragOver(e, index)}
+                            onDrop={(e) => handleLinkDrop(e, index)}
+                            className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-all ${
+                              isBeingDragged 
+                                ? "opacity-30 bg-slate-100 dark:bg-white/10" 
+                                : isTargetDrag 
+                                  ? "border-t-2 border-[#5c0620] dark:border-rose-500 bg-rose-50/50 dark:bg-rose-950/30" 
+                                  : "hover:bg-slate-50/70 dark:hover:bg-white/5"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1 flex items-center gap-2.5 sm:gap-3">
+                              {/* Reorder Controls: Drag handle + Order index + Up/Down arrows */}
+                              {currentUser?.role === "superadmin" && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {/* Drag Handle */}
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => handleLinkDragStart(e, index)}
+                                    onDragEnd={handleLinkDragEnd}
+                                    className="p-1 text-slate-300 dark:text-slate-600 hover:text-slate-700 dark:hover:text-white cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-colors select-none"
+                                    title="คลิกค้างแล้วลากเพื่อสลับลำดับ"
+                                  >
+                                    <GripVertical className="w-4 h-4" />
+                                  </div>
+
+                                  {/* Quick Up/Down buttons */}
+                                  <div className="flex flex-col">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveLink(index, index - 1)}
+                                      disabled={isFirst || isSavingOrder}
+                                      className="p-0.5 text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded transition-colors disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                                      title="เลื่อนขึ้น 1 อันดับ"
+                                    >
+                                      <ChevronUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveLink(index, index + 1)}
+                                      disabled={isLast || isSavingOrder}
+                                      className="p-0.5 text-slate-400 hover:text-[#5c0620] dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded transition-colors disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                                      title="เลื่อนลง 1 อันดับ"
+                                    >
+                                      <ChevronDown className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Order Badge */}
+                              <span className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center justify-center shrink-0 font-mono shadow-2xs">
+                                #{index + 1}
+                              </span>
+
                               {/* Small thumbnail preview in admin list */}
-                              <div className="w-14 h-10 rounded-md bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-150 dark:border-white/10">
+                              <div className="w-12 h-9 sm:w-14 sm:h-10 rounded-md bg-slate-100 dark:bg-white/10 overflow-hidden shrink-0 border border-slate-150 dark:border-white/10 hidden xs:block">
                                 <img 
                                   src={link.thumbnailUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=100&auto=format&fit=crop"} 
                                   alt="" 
@@ -2120,9 +2257,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   className="w-full h-full object-cover"
                                 />
                               </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <span className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[250px]">{link.title}</span>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                  <span className="font-semibold text-slate-800 dark:text-white text-xs sm:text-sm truncate max-w-[200px] sm:max-w-[260px]">{link.title}</span>
                                   {cat === 'university' ? (
                                     <span className="px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 rounded-full inline-flex items-center gap-1 border border-indigo-200/50 dark:border-indigo-800/40">
                                       <Building2 className="w-2.5 h-2.5" />
@@ -2154,14 +2292,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                     ({link.clickCount || 0} คลิก)
                                   </span>
                                 </div>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 font-mono truncate mb-1">{link.url}</p>
-                                {link.description && (
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 italic">{link.description}</p>
-                                )}
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate">{link.url}</p>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1 shrink-0">
                               <button
                                 onClick={() => togglePinStatus(link)}
                                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
@@ -2179,14 +2314,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   <button
                                     onClick={() => startEditLink(link)}
                                     className="p-1.5 hover:bg-amber-50 text-amber-500 hover:text-amber-700 rounded-lg transition-colors cursor-pointer"
-                                    title="แก้ไข"
+                                    title="แก้ไขข้อมูลลิงก์"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => setLinkToDelete({ id: link.id, title: link.title })}
                                     className="p-1.5 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded-lg transition-colors cursor-pointer"
-                                    title="ลบ"
+                                    title="ลบลิงก์"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
