@@ -191,13 +191,22 @@ export default function App() {
     }
   }, []);
 
-  // Smooth scroll to top listener
+  // Optimized high-fps scroll listener (zero re-renders during active scrolling)
   useEffect(() => {
+    let ticking = false;
+    let isShown = false;
+
     const handleScroll = () => {
-      if (window.scrollY > 300) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const shouldShow = window.scrollY > 300;
+          if (shouldShow !== isShown) {
+            isShown = shouldShow;
+            setShowScrollTop(shouldShow);
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });

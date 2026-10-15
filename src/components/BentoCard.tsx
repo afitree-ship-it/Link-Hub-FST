@@ -175,14 +175,14 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
     </a>
   );
 
-  const cardBase = "group relative rounded-[22px] sm:rounded-[26px] overflow-hidden transition-all duration-200 hover:-translate-y-1 focus-within:ring-4 focus-within:ring-[#5c0620]/30 dark:focus-within:ring-rose-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.07)] hover:shadow-[0_14px_34px_rgba(0,0,0,0.13)] border border-slate-200/90 dark:border-white/10";
+  const cardBase = "group relative rounded-[22px] sm:rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-150 ease-out hover:-translate-y-0.5 focus-within:ring-4 focus-within:ring-[#5c0620]/30 dark:focus-within:ring-rose-500/30 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_22px_rgba(0,0,0,0.11)] border border-slate-200/90 hover:border-slate-300 dark:border-white/10 dark:hover:border-white/20 transform-gpu link-card-contain";
 
   if (variant === "feature") {
     return (
       <div className={`${cardBase} bg-white dark:bg-[#1e1b1e] flex flex-col h-full`}>
         {hasImage ? (
           <div className="relative h-28 sm:h-40 bg-[#e4dfdd] dark:bg-[#2c272c] overflow-hidden">
-            <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+            <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-150 ease-out group-hover:scale-[1.015] transform-gpu" />
           </div>
         ) : null}
         <div className="absolute top-3 right-3">{pinButton}</div>
@@ -219,7 +219,7 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
         <div className="relative aspect-[16/10] sm:aspect-auto sm:min-h-[220px] overflow-hidden flex items-center justify-center" style={hasImage ? undefined : { background: tile.bg }}>
           {hasImage ? (
             <div className="absolute inset-0 bg-[#e4dfdd] dark:bg-[#2c272c]">
-              <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+              <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-150 ease-out group-hover:scale-[1.015] transform-gpu" />
             </div>
           ) : (
             <SiteIcon link={link} index={index} size={72} radius={22} />
@@ -257,7 +257,7 @@ export const BentoCard: React.FC<BentoCardProps> = React.memo(({
       <div className="relative aspect-[16/10] overflow-hidden flex items-center justify-center" style={hasImage ? undefined : { background: tile.bg }}>
         {hasImage ? (
           <div className="absolute inset-0 bg-[#e4dfdd] dark:bg-[#2c272c]">
-            <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+            <img src={link.thumbnailUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="w-full h-full object-cover transition-transform duration-150 ease-out group-hover:scale-[1.015] transform-gpu" />
           </div>
         ) : (
           <SiteIcon link={link} index={index} size={56} radius={18} />

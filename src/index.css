@@ -7,9 +7,8 @@
   --font-sans: "Anuphan", "Prompt", system-ui, -apple-system, sans-serif;
 }
 
-/* Smooth Scrolling & Performance Optimizations */
+/* Ultra-Fast Responsive Scrolling & Performance Optimizations */
 html {
-  scroll-behavior: smooth;
   scroll-padding-top: 2rem;
   -webkit-text-size-adjust: 100%;
 }
@@ -18,8 +17,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  text-rendering: optimizeLegibility;
-  scroll-behavior: smooth;
+  text-rendering: optimizeSpeed;
 }
 
 /* Custom Smooth Minimalist Scrollbar */
@@ -73,5 +71,6 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 /* Fast Rendering Optimization for Offscreen Elements */
 .link-card-contain {
   content-visibility: auto;
-  contain-intrinsic-size: 0 160px;
+  contain-intrinsic-size: 0 190px;
+  contain: layout style;
 }
