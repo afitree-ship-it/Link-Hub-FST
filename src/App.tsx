@@ -38,6 +38,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { hashStaffCode, parseStaffCodeHashes } from "./staffCodes";
 import { sendActionToWebApp, getLastWriteAt, WRITE_SETTLE_MS, DEFAULT_GAS_URL, normalizeLink } from "./googleSheets";
 import { Language, getTranslation, autoTranslateThaiToEnglish, ACADEMIC_GLOSSARY } from "./i18n";
+import campusBg from "./assets/campus-bg.jpg";
 
 export default function App() {
   const [links, setLinks] = useState<Link[]>([]);
@@ -1051,6 +1052,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f3f0ef] dark:bg-[#121113] text-[#1f1a1c] dark:text-[#f3f0ef] flex flex-col font-sans selection:bg-[#5c0620]/20 selection:text-[#5c0620] dark:selection:bg-rose-500/30 dark:selection:text-rose-200 relative overflow-x-clip transition-colors duration-200">
+
+      {/* Background layer: Subtle misty lush green mountains & campus building */}
+      <div 
+        aria-hidden="true" 
+        className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none"
+      >
+        {/* Campus & Green Mountains scenery */}
+        <img
+          src={campusBg}
+          alt=""
+          className="w-full h-full object-cover object-top opacity-22 dark:opacity-10 scale-[1.03] filter contrast-[1.05] saturate-[1.15] dark:saturate-[0.7] dark:brightness-[0.75] transition-all duration-700"
+        />
+
+        {/* Soft atmospheric morning mist overlay layers */}
+        <div 
+          className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.45)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.05)_0%,transparent_70%)] blur-2xl animate-mist-slow"
+        />
+        <div 
+          className="absolute top-0 inset-x-0 h-[480px] bg-gradient-to-b from-white/40 via-white/15 to-transparent dark:from-black/30 dark:via-black/10 dark:to-transparent blur-xl animate-mist-reverse"
+        />
+
+        {/* Smooth vignette & page background blend for high text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#f3f0ef]/40 via-[#f3f0ef]/20 to-[#f3f0ef] dark:from-[#121113]/60 dark:via-[#121113]/30 dark:to-[#121113]" />
+      </div>
 
       {adminConfig.isAnnouncementActive && adminConfig.announcementText && (
         <div className="relative z-20 bg-[#3a0210] dark:bg-[#20040b] text-white px-4 py-2.5 text-center text-sm font-medium border-b border-rose-900/30">

@@ -70,6 +70,39 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Gentle atmospheric mist animations */
+@keyframes mistDriftSlow {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate3d(1.5%, -6px, 0) scale(1.02);
+    opacity: 0.6;
+  }
+}
+
+@keyframes mistDriftReverse {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1.02);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate3d(-1.5%, 6px, 0) scale(0.99);
+    opacity: 0.45;
+  }
+}
+
+.animate-mist-slow {
+  animation: mistDriftSlow 22s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-mist-reverse {
+  animation: mistDriftReverse 30s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 /* Fast Rendering Optimization for Offscreen Elements */
 .link-card-contain {
   content-visibility: auto;
